@@ -1,0 +1,30 @@
+{
+  "format": "dimer_hf_snapshot",
+  "formatVersion": 1,
+  "modelKey": "swin2sr-x2-64",
+  "modelId": "caidas/swin2SR-classical-sr-x2-64",
+  "revision": "cee1c923c6a37361c6e5650b65dcf4be821e5d52",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 642,
+      "sha256": "9186aaf5bf94b0adb71532ad70368320e8134815fa026827c8f0e4920dc6886c"
+    },
+    {
+      "path": "config.json",
+      "bytes": 772,
+      "sha256": "11179bdfd48394977f7fe6177b3a87d9c2c6fa2a67a4b3a7376229ca407f0376"
+    },
+    {
+      "path": "model.safetensors",
+      "bytes": 48460660,
+      "sha256": "a515955815ab6dba3a9331d8c75db13a5166a5ffbcebf1a95ab676a5656ac4fb"
+    },
+    {
+      "path": "preprocessor_config.json",
+      "bytes": 152,
+      "sha256": "cbc36266fcc93d5bc1e9ca69bcc648ae9d268918ad14cd3507216740f129cc4d"
+    }
+  ],
+  "totalBytes": 48462226
+}

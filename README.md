@@ -1,14 +1,53 @@
-# swin2sr-super-resolution-pipeline
+# Swin2SR 2x super-resolution pipeline
 
-DIMER pipeline scaffold for **caidas/swin2SR-classical-sr-x2-64** — Image Super-Resolution.
+DIMER inference wrapper for **Swin2SR classical-sr-x2-64** (`caidas/swin2SR-classical-sr-x2-64`), pinned to an immutable Hugging Face revision and loaded only from a digest-verified local snapshot. The pipeline upscales one RGB image by exactly 2x and returns a uint8 array; it is the classical (bicubic-degradation) variant, not a compression-artefact or real-world restorer.
 
-| | |
-|---|---|
-| Upstream model | [`caidas/swin2SR-classical-sr-x2-64`](https://huggingface.co/caidas/swin2SR-classical-sr-x2-64) |
-| Pinned revision | `cee1c923c6a37361c6e5650b65dcf4be821e5d52` (resolved 2026-09-12) |
-| Upstream license | `apache-2.0` (verified on the Hub 2026-09-12; re-check at the pinned revision before release) |
-| Weight files to stage | `model.safetensors` |
-| Status | scaffold only — no weights downloaded, no pipeline code yet |
+## Upstream alignment
 
-Weights are staged under `weights/` and are git-ignored. This repository follows the
-MODEL_CARD_SPEC 1.0 / NOTEBOOK_SPEC 1.0 conventions used by the other `*-pipeline` repos.
+- Model: `caidas/swin2SR-classical-sr-x2-64`
+- Revision: `cee1c923c6a37361c6e5650b65dcf4be821e5d52`
+- Upstream weight license: Apache-2.0
+- Upstream task: single-image super-resolution, x2
+- Repository adaptation: **none**; inference only
+
+## Quick start
+
+```python
+from PIL import Image
+from swin2sr_super_resolution_pipeline import Swin2SRPipeline, psnr
+
+pipe = Swin2SRPipeline.from_pretrained()            # stages + verifies weights/swin2sr-x2-64 first
+result = pipe.upscale(Image.open("small.png"))      # sides 8–1024 px, one image per call
+Image.fromarray(result["image"]).save("large.png")  # uint8 (2H, 2W, 3)
+print(result["input_size"], "->", result["output_size"])
+
+# optional: score against a caller-supplied high-resolution original of the same shape
+# print(psnr(result["image"], reference_uint8))
+```
+
+Install into a Python 3.12 environment that already holds the pinned dependencies with `pip install -e . --no-deps`; run `pytest -q -o addopts= tests` for the offline test suite (no weights needed). On a fresh clone the manifest is committed but the weights are not: `Swin2SRPipeline.from_pretrained(allow_download=True)` fetches exactly the missing manifest-listed files at the pinned revision, then verifies them.
+
+## Weights layout
+
+```
+weights/swin2sr-x2-64/
+  dimer-base-manifest.json   # modelId, revision, per-file bytes + SHA-256
+  config.json
+  preprocessor_config.json
+  model.safetensors          # git-ignored, 48,460,660 bytes
+  README.md
+```
+
+## Input ceilings
+
+`MIN_INPUT_SIDE = 8`, `MAX_INPUT_SIDE = 1024` (a 1024x1024 input took 160 s on the reference CPU); one image per call. See `MODEL_CARD.md` for the measured timings behind those numbers.
+
+## Documentation
+
+- `MODEL_CARD.md` — MODEL_CARD_SPEC 1.1 card, provenance digests, input/output contract, measured runtime.
+- `docs/WEIGHTS.md` — weight provenance and hosting notes.
+- `STATUS.md` — release status.
+
+## Licensing
+
+This repository's code is Apache-2.0 (see `LICENSE`). The upstream weights are Apache-2.0; see `docs/WEIGHTS.md` and `MODEL_CARD.md`.
