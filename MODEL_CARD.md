@@ -20,7 +20,11 @@ base_model: caidas/swin2SR-classical-sr-x2-64
 
 ## Interactive Colab Tutorials
 
-This release ships no tutorial notebook (`tutorials/` is absent). The package is exercised through its test suite (`tests/`) and the run instructions in the README; a `NOTEBOOK_SPEC` 1.0 `TASK-INFERENCE` notebook is a follow-up, not a claim this card makes.
+This pipeline provides a ready-to-run interactive Google Colab notebook that exercises the repository's public API end to end — bootstrap a fresh runtime, stage and verify the pinned upstream revision, validate an input, run the task, and inspect and export the outputs:
+
+- **Task Inference Tutorial**:  
+  [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/kurtvalcorza/swin2sr-super-resolution-pipeline/blob/main/tutorials/swin2sr_super_resolution_colab.ipynb) [`swin2sr_super_resolution_colab.ipynb`](https://github.com/kurtvalcorza/swin2sr-super-resolution-pipeline/blob/main/tutorials/swin2sr_super_resolution_colab.ipynb)  
+  *2× single-image super-resolution with the pinned `caidas/swin2SR-classical-sr-x2-64` weights: uint8 `(2H, 2W, 3)` output from an input of 8–512 px per side; `psnr` against a self-made reference and a bicubic baseline on the synthetic path only.*
 
 ---
 
