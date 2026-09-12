@@ -42,6 +42,16 @@ weights/swin2sr-x2-64/
 
 `MIN_INPUT_SIDE = 8`, `MAX_INPUT_SIDE = 512` (512x512 takes 34 s on the reference CPU; the 1024 px measured during the card pass took 160 s and was ruled out for DIMER); one image per call. See `MODEL_CARD.md` for the measured timings behind those numbers.
 
+## Tutorials
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/kurtvalcorza/swin2sr-super-resolution-pipeline/blob/main/tutorials/swin2sr_super_resolution_colab.ipynb)
+
+`tutorials/swin2sr_super_resolution_colab.ipynb` is declared `TASK-INFERENCE` under DIMER Notebook Specification 1.0. Its default path generates a 128×96 reference image in code and bicubic-downscales it to 64×48 (no download), surfaces the side ceilings (8–512 px) and why the ceiling was lowered, resolves the pinned model through the package's staging and verification path, upscales through `Swin2SRPipeline.upscale`, reports `psnr` against the self-made reference and a bicubic baseline as sanity evidence only, and exports the upscaled PNG plus JSON provenance. BYOD is optional and gated off by default. See `tutorials/README.md` for the registry and `docs/release-verification.md` for the release gate.
+
+## Release status
+
+**Candidate.** Static/unit checks do not constitute clean-runtime notebook evidence. The clean-runtime run of the tutorial is pending; complete `docs/release-verification.md` against the exact release revision before calling the notebook release-grade.
+
 ## Documentation
 
 - `MODEL_CARD.md` — MODEL_CARD_SPEC 1.1 card, provenance digests, input/output contract, measured runtime.
