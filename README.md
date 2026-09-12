@@ -17,7 +17,7 @@ from PIL import Image
 from swin2sr_super_resolution_pipeline import Swin2SRPipeline, psnr
 
 pipe = Swin2SRPipeline.from_pretrained()            # stages + verifies weights/swin2sr-x2-64 first
-result = pipe.upscale(Image.open("small.png"))      # sides 8–1024 px, one image per call
+result = pipe.upscale(Image.open("small.png"))      # sides 8–512 px, one image per call
 Image.fromarray(result["image"]).save("large.png")  # uint8 (2H, 2W, 3)
 print(result["input_size"], "->", result["output_size"])
 
@@ -40,7 +40,7 @@ weights/swin2sr-x2-64/
 
 ## Input ceilings
 
-`MIN_INPUT_SIDE = 8`, `MAX_INPUT_SIDE = 1024` (a 1024x1024 input took 160 s on the reference CPU); one image per call. See `MODEL_CARD.md` for the measured timings behind those numbers.
+`MIN_INPUT_SIDE = 8`, `MAX_INPUT_SIDE = 512` (512x512 takes 34 s on the reference CPU; the 1024 px measured during the card pass took 160 s and was ruled out for DIMER); one image per call. See `MODEL_CARD.md` for the measured timings behind those numbers.
 
 ## Documentation
 

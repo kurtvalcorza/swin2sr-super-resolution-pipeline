@@ -34,16 +34,16 @@ The uses below are the ones the package was built to support; everything else is
 
 ###### Primary Intended Uses
 
-The task is 2x single-image super-resolution: input one RGB still (`PIL.Image.Image`, any mode, converted to RGB) of side 8–1024 px; output a uint8 array of shape `(2H, 2W, 3)` plus `scale`, `input_size`, `output_size`. Envisioned applications are enlarging small photographs or thumbnails for display, preparing low-resolution archival or product images for print or web layouts, and upsampling frames before a downstream detector or OCR stage that expects more pixels than the source provides. The checkpoint is the *classical* SR variant trained on bicubic-downsampled images, so the intended input is a clean image that was downscaled, not a compressed, noisy, or blurred one (upstream ships separate compressed-input and real-world variants that are not packaged here). Within DIMER the pipeline is an inference component and a baseline, not an image-authentication tool.
+The task is 2x single-image super-resolution: input one RGB still (`PIL.Image.Image`, any mode, converted to RGB) of side 8–512 px; output a uint8 array of shape `(2H, 2W, 3)` plus `scale`, `input_size`, `output_size`. Envisioned applications are enlarging small photographs or thumbnails for display, preparing low-resolution archival or product images for print or web layouts, and upsampling frames before a downstream detector or OCR stage that expects more pixels than the source provides. The checkpoint is the *classical* SR variant trained on bicubic-downsampled images, so the intended input is a clean image that was downscaled, not a compressed, noisy, or blurred one (upstream ships separate compressed-input and real-world variants that are not packaged here). Within DIMER the pipeline is an inference component and a baseline, not an image-authentication tool.
 
 ###### Primary Intended Users
 
-Intended users are machine-learning engineers, imaging researchers, and application developers integrating a fixed-factor upscaler into research prototypes, internal enterprise tooling, or the DIMER workbench. A user is expected to understand that super-resolution hallucinates plausible detail rather than recovering true detail, that PSNR against a single reference is a sanity check and not a benchmark, that the output is only 2x (chaining calls compounds artefacts), and that the CPU cost grows with input area (160 s for 1024x1024 on the reference machine). Users who need arbitrary scale factors, denoising, JPEG-artefact removal, or face-specific restoration are expected to know none of that is provided here.
+Intended users are machine-learning engineers, imaging researchers, and application developers integrating a fixed-factor upscaler into research prototypes, internal enterprise tooling, or the DIMER workbench. A user is expected to understand that super-resolution hallucinates plausible detail rather than recovering true detail, that PSNR against a single reference is a sanity check and not a benchmark, that the output is only 2x (chaining calls compounds artefacts), and that the CPU cost grows with input area (34 s for 512x512, the ceiling, on the reference machine). Users who need arbitrary scale factors, denoising, JPEG-artefact removal, or face-specific restoration are expected to know none of that is provided here.
 
 ###### Out-of-scope use cases
 
 1. **Capability boundary:** only x2 upscaling of clean, bicubic-degraded RGB input; no x3/x4, no denoising, no JPEG or compression-artefact removal (the upstream `compressed-sr` and `realworld-sr` checkpoints are not packaged), no face restoration, no video with temporal consistency.
-2. **Input boundary:** `upscale` rejects anything that is not a `PIL.Image.Image` (`TypeError`), any side below `MIN_INPUT_SIDE = 8` px or above `MAX_INPUT_SIDE = 1024` px (`ValueError`); one image per call, no batching. Grayscale, palette, and RGBA inputs are converted to RGB and alpha is discarded.
+2. **Input boundary:** `upscale` rejects anything that is not a `PIL.Image.Image` (`TypeError`), any side below `MIN_INPUT_SIDE = 8` px or above `MAX_INPUT_SIDE = 512` px (`ValueError`); one image per call, no batching. Grayscale, palette, and RGBA inputs are converted to RGB and alpha is discarded.
 3. **Input boundary:** inputs that were not produced by downscaling a sharp image — screenshots, scanned text, medical or scientific imagery, heavily compressed social-media photos — fall outside the training degradation; the pipeline does not detect them and the output on them is undefined.
 4. **Decision boundary:** not for forensic enhancement (licence plates, faces, documents) presented as recovered evidence, and not for any diagnostic or measurement use where invented pixels could change a decision.
 
@@ -59,7 +59,7 @@ The upstream training pairs are synthetic: high-resolution photographs from DIV2
 
 ###### Environment
 
-Operating environment: Python 3.12 with `torch==2.14.0`, `transformers==4.57.6`, `safetensors==0.8.0`, `numpy==2.5.3`, `pillow==11.3.0`, float32 on CPU; CUDA is used automatically when visible but was not exercised for this card. Measured on the reference machine with the GPU hidden (`CUDA_VISIBLE_DEVICES=""`): load 4.0–16.6 s (cold file cache versus warm), 64x48 input 0.36 s, 256x256 7.3 s, 512x512 33.9 s, 1024x1024 160.0 s; time scales roughly with input area, which is why `MAX_INPUT_SIDE` is 1024. Data environment: the model assumes a sharp photograph that was bicubically downscaled by exactly 2x; sharper-than-expected inputs produce over-sharpening and halos, blurrier inputs are not deblurred, and compressed inputs have their block artefacts enlarged rather than removed. Lighting, colour, and scene content are unrestricted within ordinary photographs.
+Operating environment: Python 3.12 with `torch==2.14.0`, `transformers==4.57.6`, `safetensors==0.8.0`, `numpy==2.5.3`, `pillow==11.3.0`, float32 on CPU; CUDA is used automatically when visible but was not exercised for this card. Measured on the reference machine with the GPU hidden (`CUDA_VISIBLE_DEVICES=""`): load 4.0–16.6 s (cold file cache versus warm), 64x48 input 0.36 s, 256x256 7.3 s, 512x512 33.9 s, 1024x1024 160.0 s; time scales roughly with input area, which is why `MAX_INPUT_SIDE` was set to 512 (the 1024 px run is retained above as the measurement that motivated the ceiling). Data environment: the model assumes a sharp photograph that was bicubically downscaled by exactly 2x; sharper-than-expected inputs produce over-sharpening and halos, blurrier inputs are not deblurred, and compressed inputs have their block artefacts enlarged rather than removed. Lighting, colour, and scene content are unrestricted within ordinary photographs.
 
 #### Metrics
 
@@ -90,7 +90,7 @@ This pipeline is not intended for decisions in health, safety, criminal justice,
 ###### Mitigations
 
 - **Supply-chain integrity:** `MODEL_REVISION` is a 40-hex commit; `stage_missing_files` refuses a manifest whose `modelId`/`revision` differ from the package constants and fetches only manifest-listed files at that revision when `allow_download=True`; `verify_snapshot` then checks every listed file's byte size and SHA-256 before any load; `from_pretrained` loads only from the verified directory with `local_files_only=True` and always passes `trust_remote_code=False`. A test flips one hex digit of a manifest digest and asserts the loader refuses; another asserts a foreign manifest is refused.
-- **Input integrity:** `validate_image` rejects non-PIL inputs and sides outside 8–1024 px before the model runs; `upscale` raises if the backend returns anything other than a `(2H, 2W, 3)` uint8 array.
+- **Input integrity:** `validate_image` rejects non-PIL inputs and sides outside 8–512 px before the model runs; `upscale` raises if the backend returns anything other than a `(2H, 2W, 3)` uint8 array.
 - **Reproducibility:** exact `==` pins in `pyproject.toml`; every result carries `model_id` and `model_revision`.
 - **Refusals:** no x4, no compressed/real-world variants, no download without the explicit flag.
 - No statistical mitigation (class balancing, subsampling) applies: the model is a dense regressor with no classes.
@@ -102,7 +102,7 @@ This pipeline is not intended for decisions in health, safety, criminal justice,
 - **Automation bias:** a crisp output invites more trust than a blurry input, so reviewers may stop questioning it.
 - **Privacy exposure:** images of people or private spaces are processed without any content check; the data subject bears the harm.
 - **Bias amplification:** any under-representation in DIV2K/Flickr2K is reproduced as lower fidelity for those inputs, undetected because no per-group evaluation exists.
-- **Resource failure:** a 1024x1024 input took 160 s on the reference CPU and memory grows with area; a request stream near the ceiling can exhaust a shared host.
+- **Resource failure:** a 512x512 input (the ceiling) took 34 s and a 1024x1024 input 160 s on the reference CPU; memory grows with area, so a request stream near the ceiling can still exhaust a shared host.
 
 ###### Use cases
 
@@ -121,7 +121,7 @@ Prohibited even where the model would work: enhancing images for covert surveill
 
 - `Swin2SRPipeline.from_pretrained(device=None, weights_dir=None, allow_download=False)` — stages missing manifest files (only with `allow_download=True`), verifies digests, loads; `device` defaults to `cuda:0` when visible, else `cpu`.
 - `upscale(image: PIL.Image.Image) -> dict` with keys `image` (uint8 `(2H, 2W, 3)` RGB), `scale` (2), `input_size` (`(W, H)`), `output_size` (`(2W, 2H)`), `model_id`, `model_revision`.
-- Ceilings: `MIN_INPUT_SIDE = 8`, `MAX_INPUT_SIDE = 1024`; `UPSCALE = 2`.
+- Ceilings: `MIN_INPUT_SIDE = 8`, `MAX_INPUT_SIDE = 512` (lowered from the 1024 px executed during the card pass, by owner decision on 2026-09-12: 512² costs 34 s on the reference CPU, 1024² 160 s); `UPSCALE = 2`.
 - `psnr(pred, ref) -> float` — two uint8 arrays of identical shape; `inf` when identical; `ValueError`/`TypeError` otherwise.
 - `verify_snapshot(path=None) -> dict`, `stage_missing_files(path=None, *, allow_download=False, downloader=None) -> list[str]`.
 

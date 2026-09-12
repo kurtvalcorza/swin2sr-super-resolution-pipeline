@@ -19,9 +19,10 @@ MANIFEST_NAME = "dimer-base-manifest.json"
 
 UPSCALE = 2  # config.json "upscale": 2
 # Input ceilings. Swin2SR runs windowed attention over every input pixel (patch_size 1), so activation
-# memory and time grow with input area; MAX_INPUT_SIDE is the largest square side actually executed
-# on CPU during the card pass (1024 px in 160 s; see MODEL_CARD.md, Runtime).
-MAX_INPUT_SIDE = 1024
+# memory and time grow with input area. The card pass executed up to 1024 px on CPU (160 s); the ceiling
+# was set to 512 px (34 s on the reference CPU) on 2026-09-12 by the repository owner so DIMER validators
+# stay responsive. See MODEL_CARD.md, Runtime.
+MAX_INPUT_SIDE = 512
 MIN_INPUT_SIDE = 8  # config.json "window_size": 8; the processor pads to a multiple of 8
 
 
