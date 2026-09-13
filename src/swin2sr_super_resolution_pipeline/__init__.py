@@ -1,5 +1,6 @@
 from .pipeline import (
     DEFAULT_WEIGHTS_DIR,
+    INPUT_SCHEMA,
     MAX_INPUT_SIDE,
     MIN_INPUT_SIDE,
     MODEL_ID,
@@ -8,13 +9,16 @@ from .pipeline import (
     MODEL_REVISION,
     UPSCALE,
     Swin2SRPipeline,
+    evaluation_report,
     psnr,
     stage_missing_files,
+    validate_inputs,
     verify_snapshot,
 )
 
 __all__ = [
     "DEFAULT_WEIGHTS_DIR",
+    "INPUT_SCHEMA",
     "MAX_INPUT_SIDE",
     "MIN_INPUT_SIDE",
     "MODEL_ID",
@@ -23,7 +27,9 @@ __all__ = [
     "MODEL_REVISION",
     "UPSCALE",
     "Swin2SRPipeline",
+    "evaluation_report",
     "psnr",
     "stage_missing_files",
+    "validate_inputs",
     "verify_snapshot",
 ]

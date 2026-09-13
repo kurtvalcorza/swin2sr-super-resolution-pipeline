@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -133,6 +133,150 @@ def validate_image(image: Any) -> Image.Image:
     if max(width, height) > MAX_INPUT_SIDE:
         raise ValueError(f"image side {max(width, height)} px > MAX_INPUT_SIDE {MAX_INPUT_SIDE}")
     return image.convert("RGB")
+
+
+INPUT_SCHEMA: dict[str, Any] = {
+    "input": "PIL.Image.Image, or a sequence of them for the validation stage; any mode, converted to RGB",
+    "image_side_px": [MIN_INPUT_SIDE, MAX_INPUT_SIDE],
+    "scale": UPSCALE,
+    "output": f"uint8 RGB array of shape ({UPSCALE}H, {UPSCALE}W, 3)",
+    "preprocessing": (
+        f"convert to RGB and pad to a multiple of the {MIN_INPUT_SIDE} px attention window; the padding "
+        "is cropped back off at output scale"
+    ),
+}
+
+
+def validate_inputs(images: Any, *, names: Sequence[str] | None = None) -> dict[str, Any]:
+    """Validation stage: return the input manifest (schema, per-input observations, verdict).
+
+    Each image is routed through the public ``validate_image`` that ``upscale`` itself calls, so a
+    rejection here raises exactly what ``upscale`` would; a caller that wants the finding recorded
+    catches the exception and stores ``str(exc)`` under ``findings``.
+    """
+    batch = [images] if isinstance(images, Image.Image) else images
+    if not isinstance(batch, Sequence) or isinstance(batch, str | bytes):
+        raise TypeError("images must be a PIL.Image.Image or a sequence of them")
+    if len(batch) < 1:
+        raise ValueError("at least one image is required")
+    if names is not None and len(names) != len(batch):
+        raise ValueError("names must have one entry per image")
+    inputs = []
+    for index, candidate in enumerate(batch):
+        rgb = validate_image(candidate)
+        inputs.append(
+            {
+                "id": names[index] if names else f"image-{index}",
+                "mode": getattr(candidate, "mode", rgb.mode),
+                "size": [rgb.width, rgb.height],
+                "output_size": [rgb.width * UPSCALE, rgb.height * UPSCALE],
+            }
+        )
+    return {
+        "schema": dict(INPUT_SCHEMA),
+        "inputs": inputs,
+        "scale": UPSCALE,
+        "n_images": len(inputs),
+        "verdict": "accepted",
+        "findings": [],
+        "model_id": MODEL_ID,
+        "model_revision": MODEL_REVISION,
+    }
+
+
+def _as_uint8_rgb(image: Any) -> np.ndarray:
+    """Coerce a PIL image or an array to a uint8 RGB array; raise on anything else."""
+    if isinstance(image, Image.Image):
+        return np.asarray(image.convert("RGB"))
+    array = np.asarray(image)
+    if array.dtype != np.uint8 or array.ndim != 3 or array.shape[2] != 3:
+        raise TypeError("reference must be a PIL image or a uint8 RGB array of shape (H, W, 3)")
+    return array
+
+
+def evaluation_report(
+    result: Mapping[str, Any],
+    reference: Any | None = None,
+    *,
+    low_resolution: Any | None = None,
+    sample_kind: str = "synthetic",
+) -> dict[str, Any]:
+    """Evaluation stage: a machine-readable report even when nothing is measurable.
+
+    With ``reference`` (the high-resolution image the output should match, same shape as
+    ``result["image"]``) the report carries ``psnr`` in dB as sample-sanity evidence; pass
+    ``low_resolution`` as well and the same ``psnr`` is computed for a plain bicubic upscale of the
+    input, which is the only baseline worth comparing against. Without a reference the verdict is
+    ``not-measurable``: a reconstruction has no intrinsic score.
+    """
+    output = np.asarray(result["image"])
+    base = {
+        "task": f"{UPSCALE}x single-image super-resolution (classical SR)",
+        "score_semantics": (
+            "PSNR in dB between two uint8 RGB arrays (10*log10(255**2 / MSE)); higher is closer to the "
+            "reference, it is not a perceptual quality score, and the pipeline ships no threshold"
+        ),
+        "sample_kind": sample_kind,
+        "n_images": 1,
+        "scale": result.get("scale", UPSCALE),
+        "model_id": MODEL_ID,
+        "model_revision": MODEL_REVISION,
+    }
+    if reference is None:
+        return {
+            **base,
+            "metrics": [],
+            "baselines": [],
+            "verdict": "not-measurable",
+            "reason": "no high-resolution reference was supplied for the evaluated image",
+            "needs": (
+                "high-resolution/low-resolution pairs produced by a stated degradation — a public "
+                "benchmark such as Set5, Set14 or DIV2K with its own downscaling kernel — scored with "
+                "psnr against a plain bicubic upscale of the same input as the baseline"
+            ),
+        }
+    ref_array = _as_uint8_rgb(reference)
+    baselines = []
+    if low_resolution is not None:
+        height, width = ref_array.shape[0], ref_array.shape[1]
+        bicubic = _as_uint8_rgb(
+            _as_pil(low_resolution).convert("RGB").resize((width, height), Image.Resampling.BICUBIC)
+        )
+        baselines.append(
+            {
+                "id": "psnr",
+                "name": f"bicubic {UPSCALE}x resize of the same input",
+                "value": psnr(bicubic, ref_array),
+                "unit": "dB",
+            }
+        )
+    return {
+        **base,
+        "metrics": [
+            {
+                "id": "psnr",
+                "value": psnr(output, ref_array),
+                "unit": "dB",
+                "estimation": "single image against a caller-supplied reference, no dispersion estimate",
+            }
+        ],
+        "baselines": baselines,
+        "verdict": "sample-sanity",
+        "reason": (
+            "one image scored against a reference the caller supplied, under the caller's own "
+            "downscaling kernel; not a benchmark"
+        ),
+        "needs": (
+            "a public benchmark set with its stated degradation kernel for any comparable PSNR claim"
+        ),
+    }
+
+
+def _as_pil(image: Any) -> Image.Image:
+    """Coerce a PIL image or a uint8 RGB array to a PIL image."""
+    if isinstance(image, Image.Image):
+        return image
+    return Image.fromarray(_as_uint8_rgb(image))
 
 
 @dataclass
