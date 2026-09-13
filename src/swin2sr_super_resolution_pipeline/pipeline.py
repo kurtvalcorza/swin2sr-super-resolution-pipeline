@@ -293,10 +293,6 @@ class Swin2SRPipeline:
         weights_dir: str | Path | None = None,
         allow_download: bool = False,
     ) -> Swin2SRPipeline:
-        import torch
-        from transformers import Swin2SRForImageSuperResolution, Swin2SRImageProcessor
-
-        resolved_device = device or ("cuda:0" if torch.cuda.is_available() else "cpu")
         root = Path(weights_dir) if weights_dir is not None else DEFAULT_WEIGHTS_DIR
         if (root / MANIFEST_NAME).is_file():
             stage_missing_files(root, allow_download=allow_download)
@@ -309,6 +305,10 @@ class Swin2SRPipeline:
                 f"no verified snapshot at {root} and allow_download=False; "
                 f"stage {MODEL_ID}@{MODEL_REVISION} under weights/{MODEL_KEY}"
             )
+        # Refuse invalid snapshots before importing model libraries.
+        import torch
+        from transformers import Swin2SRForImageSuperResolution, Swin2SRImageProcessor
+        resolved_device = device or ("cuda:0" if torch.cuda.is_available() else "cpu")
         processor = Swin2SRImageProcessor.from_pretrained(
             source, revision=MODEL_REVISION, trust_remote_code=False, **kwargs
         )
