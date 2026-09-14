@@ -7,7 +7,7 @@ date_published: "2022-12-16"
 date_published_source: "Hugging Face Hub repository creation date of the exact hosted checkpoint (`createdAt`, https://huggingface.co/api/models/caidas/swin2SR-classical-sr-x2-64)"
 ---
 
-# Swin2SR classical-sr-x2-64 (DIMER package v0.1.0) — Image Super-Resolution (Inference)
+# Swin2SR classical-sr-x2-64 — Image Super-Resolution (Inference)
 
 [![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-caidas%2Fswin2SR--classical--sr--x2--64-ffcc4d?style=flat)](https://huggingface.co/caidas/swin2SR-classical-sr-x2-64)
 [![Upstream GitHub](https://img.shields.io/badge/Upstream%20GitHub-mv--lab%2Fswin2sr-181717?style=flat&logo=github&logoColor=white)](https://github.com/mv-lab/swin2sr)
