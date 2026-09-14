@@ -104,7 +104,7 @@ they are measurements for the stated runtime, not general estimates.
 
 | Date (UTC) | Commit / notebook blob | Executor | Path exercised | Wall | Outcome |
 |---|---|---|---|---|---|
-| | | | Default sample path | | pending — queued to the GPU lane |
+| 2026-09-14 | `8e25aa7` / `472a93920103` | Kaggle CPU (`kurtvalcorza/dimer-nb2-swin2sr-super-resolution` v1) | Default sample path | 267.5 s | **PASSED** — 8/8 ok code cells executed cleanly, 10 files, 48 MB staged |
 
 ## Current status
 

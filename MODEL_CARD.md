@@ -3,6 +3,8 @@ license: apache-2.0
 model_card_spec: "1.1"
 pipeline_tag: image-to-image
 base_model: caidas/swin2SR-classical-sr-x2-64
+date_published: "2022-12-16"
+date_published_source: "Hugging Face Hub repository creation date of the exact hosted checkpoint (`createdAt`, https://huggingface.co/api/models/caidas/swin2SR-classical-sr-x2-64)"
 ---
 
 # Swin2SR classical-sr-x2-64 (DIMER package v0.1.0) — Image Super-Resolution (Inference)
@@ -11,7 +13,6 @@ base_model: caidas/swin2SR-classical-sr-x2-64
 [![Upstream GitHub](https://img.shields.io/badge/Upstream%20GitHub-mv--lab%2Fswin2sr-181717?style=flat&logo=github&logoColor=white)](https://github.com/mv-lab/swin2sr)
 [![arXiv Paper](https://img.shields.io/badge/arXiv-2209.11345-b31b1b.svg)](https://arxiv.org/abs/2209.11345)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Pipeline](https://img.shields.io/badge/Pipeline-swin2sr--super--resolution--pipeline-2ea44f?style=flat&logo=github)](https://github.com/kurtvalcorza/swin2sr-super-resolution-pipeline)
 
 > [!WARNING]
 > ⚠️ **Provided for research, training, and evaluation purposes only.** Model weights are redistributed unmodified under their upstream license, which controls your use, including any commercial use or redistribution; the accompanying code and notebooks are released under this repository's license. All of it is supplied **"as is"**, without warranty of any kind, and has not been validated for production, clinical, or safety-critical use. Running the notebooks downloads third-party weights and datasets governed by their own licenses and consumes compute on your own Colab/Kaggle account. To the maximum extent permitted by law, the maintainers of this repository and the DIMER platform accept no liability for any damages arising from their use. Hosting implies no affiliation with or endorsement by the original authors.
@@ -28,7 +29,7 @@ This pipeline provides a ready-to-run interactive Google Colab notebook that exe
 
 ---
 
-###### Description
+#### Description
 
 `caidas/swin2SR-classical-sr-x2-64` is the Transformers-format release of the Swin2SR classical 2x super-resolution model (Conde et al., arXiv:2209.11345), pinned here to revision `cee1c923c6a37361c6e5650b65dcf4be821e5d52`. The snapshot `config.json` declares `Swin2SRForImageSuperResolution`: a SwinV2 transformer with `patch_size` 1 (every pixel is a token), `embed_dim` 180, six residual Swin groups of six layers each (`depths` and `num_heads` all 6), `window_size` 8, `mlp_ratio` 2.0, a `1conv` residual connection, and a `pixelshuffle` upsampler with `upscale` 2; `image_size` 64 records the training patch size. At inference the model maps a padded RGB tensor in `[0, 1]` to a 2x-larger RGB reconstruction in one forward pass; nothing is trained, fine-tuned, or conditioned here. What this repository adds is packaging: `verify_snapshot` and `stage_missing_files` (manifest digest checking and fresh-clone staging), `Swin2SRPipeline.from_pretrained` (verified local loading, `trust_remote_code=False`), `upscale` (input validation, padding crop, uint8 conversion), and a `psnr` helper for caller-supplied high-resolution references.
 
@@ -63,7 +64,7 @@ The upstream training pairs are synthetic: high-resolution photographs from DIV2
 
 ###### Environment
 
-Operating environment: Python 3.12 with `torch==2.14.0`, `transformers==4.57.6`, `safetensors==0.8.0`, `numpy==2.5.3`, `pillow==11.3.0`, float32 on CPU; CUDA is used automatically when visible but was not exercised for this card. Measured on the reference machine with the GPU hidden (`CUDA_VISIBLE_DEVICES=""`): load 4.0–16.6 s (cold file cache versus warm), 64x48 input 0.36 s, 256x256 7.3 s, 512x512 33.9 s, 1024x1024 160.0 s; time scales roughly with input area, which is why `MAX_INPUT_SIDE` was set to 512 (the 1024 px run is retained above as the measurement that motivated the ceiling). Data environment: the model assumes a sharp photograph that was bicubically downscaled by exactly 2x; sharper-than-expected inputs produce over-sharpening and halos, blurrier inputs are not deblurred, and compressed inputs have their block artefacts enlarged rather than removed. Lighting, colour, and scene content are unrestricted within ordinary photographs.
+Operating environment: Python 3.12 with `torch==2.14.0`, `torchvision==0.29.0`, `torchaudio==2.11.0`, `transformers==4.57.6`, `safetensors==0.8.0`, `numpy==2.5.3`, `pillow==11.3.0`, float32 on CPU; CUDA is used automatically when visible but was not exercised for this card. Measured on the reference machine with the GPU hidden (`CUDA_VISIBLE_DEVICES=""`): load 4.0–16.6 s (cold file cache versus warm), 64x48 input 0.36 s, 256x256 7.3 s, 512x512 33.9 s, 1024x1024 160.0 s; time scales roughly with input area, which is why `MAX_INPUT_SIDE` was set to 512 (the 1024 px run is retained above as the measurement that motivated the ceiling). Data environment: the model assumes a sharp photograph that was bicubically downscaled by exactly 2x; sharper-than-expected inputs produce over-sharpening and halos, blurrier inputs are not deblurred, and compressed inputs have their block artefacts enlarged rather than removed. Lighting, colour, and scene content are unrestricted within ordinary photographs.
 
 #### Metrics
 
@@ -131,7 +132,7 @@ Prohibited even where the model would work: enhancing images for covert surveill
 
 ## Runtime
 
-- Pins: `torch==2.14.0`, `transformers==4.57.6`, `safetensors==0.8.0`, `numpy==2.5.3`, `pillow==11.3.0`; Python 3.12.
+- Pins: `torch==2.14.0`, `torchvision==0.29.0`, `torchaudio==2.11.0`, `transformers==4.57.6`, `safetensors==0.8.0`, `numpy==2.5.3`, `pillow==11.3.0`; Python 3.12.
 - Precision: float32; preprocessing is rescale to `[0, 1]` and pad to a multiple of 8 (`Swin2SRImageProcessor` from the snapshot); the padding is cropped off at 2x on output.
 - Measured 2026-09-12 in the Windows venv (`torch 2.14.0+cu130`) with `CUDA_VISIBLE_DEVICES=""`, device `cpu`: `verify_snapshot` 0.03–0.05 s; load 16.62 s cold / 4.01 s warm; `upscale` on a synthetic 64x48 gradient-and-square image 0.356 s cold / 0.315 s warm, output `(96, 128, 3)` uint8, `psnr` vs bicubic 35.21 dB; 256x256 → 7.29 s; 512x512 → 33.90 s; 1024x1024 → 160.04 s (process wall 169 s including load).
 - Tests: `pytest -q -o addopts= tests` — 10 passed, offline, no weights required; `ruff check src tests` clean.
