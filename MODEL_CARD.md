@@ -64,7 +64,7 @@ The upstream training pairs are synthetic: high-resolution photographs from DIV2
 
 ###### Environment
 
-Operating environment: Python 3.12 with `torch==2.14.0`, `transformers==4.57.6`, `safetensors==0.8.0`, `numpy==2.5.3`, `pillow==11.3.0`, float32 on CPU; CUDA is used automatically when visible but was not exercised for this card. Measured on the reference machine with the GPU hidden (`CUDA_VISIBLE_DEVICES=""`): load 4.0–16.6 s (cold file cache versus warm), 64x48 input 0.36 s, 256x256 7.3 s, 512x512 33.9 s, 1024x1024 160.0 s; time scales roughly with input area, which is why `MAX_INPUT_SIDE` was set to 512 (the 1024 px run is retained above as the measurement that motivated the ceiling). Data environment: the model assumes a sharp photograph that was bicubically downscaled by exactly 2x; sharper-than-expected inputs produce over-sharpening and halos, blurrier inputs are not deblurred, and compressed inputs have their block artefacts enlarged rather than removed. Lighting, colour, and scene content are unrestricted within ordinary photographs.
+Operating environment: Python 3.12 with `torch==2.14.0`, `torchvision==0.29.0`, `torchaudio==2.11.0`, `transformers==4.57.6`, `safetensors==0.8.0`, `numpy==2.5.3`, `pillow==11.3.0`, float32 on CPU; CUDA is used automatically when visible but was not exercised for this card. Measured on the reference machine with the GPU hidden (`CUDA_VISIBLE_DEVICES=""`): load 4.0–16.6 s (cold file cache versus warm), 64x48 input 0.36 s, 256x256 7.3 s, 512x512 33.9 s, 1024x1024 160.0 s; time scales roughly with input area, which is why `MAX_INPUT_SIDE` was set to 512 (the 1024 px run is retained above as the measurement that motivated the ceiling). Data environment: the model assumes a sharp photograph that was bicubically downscaled by exactly 2x; sharper-than-expected inputs produce over-sharpening and halos, blurrier inputs are not deblurred, and compressed inputs have their block artefacts enlarged rather than removed. Lighting, colour, and scene content are unrestricted within ordinary photographs.
 
 #### Metrics
 
@@ -132,7 +132,7 @@ Prohibited even where the model would work: enhancing images for covert surveill
 
 ## Runtime
 
-- Pins: `torch==2.14.0`, `transformers==4.57.6`, `safetensors==0.8.0`, `numpy==2.5.3`, `pillow==11.3.0`; Python 3.12.
+- Pins: `torch==2.14.0`, `torchvision==0.29.0`, `torchaudio==2.11.0`, `transformers==4.57.6`, `safetensors==0.8.0`, `numpy==2.5.3`, `pillow==11.3.0`; Python 3.12.
 - Precision: float32; preprocessing is rescale to `[0, 1]` and pad to a multiple of 8 (`Swin2SRImageProcessor` from the snapshot); the padding is cropped off at 2x on output.
 - Measured 2026-09-12 in the Windows venv (`torch 2.14.0+cu130`) with `CUDA_VISIBLE_DEVICES=""`, device `cpu`: `verify_snapshot` 0.03–0.05 s; load 16.62 s cold / 4.01 s warm; `upscale` on a synthetic 64x48 gradient-and-square image 0.356 s cold / 0.315 s warm, output `(96, 128, 3)` uint8, `psnr` vs bicubic 35.21 dB; 256x256 → 7.29 s; 512x512 → 33.90 s; 1024x1024 → 160.04 s (process wall 169 s including load).
 - Tests: `pytest -q -o addopts= tests` — 10 passed, offline, no weights required; `ruff check src tests` clean.
