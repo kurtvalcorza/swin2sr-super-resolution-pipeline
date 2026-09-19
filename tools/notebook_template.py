@@ -63,7 +63,7 @@ TEMPLATE = {
         "again per species, re-upscales the scene and four held-out crops with the adapted model, exports the adapter as "
         "safetensors with a manifest, and reloads that artifact into a fresh pipeline to verify pixel parity. The default "
         "path needs no repository clone, no DIMER worker or service, no credential, no upload dialog and no configuration "
-        "edit (NOTEBOOK_SPEC 2.0 §5). On the build workstation's CPU the whole path took about CPU_TOTAL_MIN minutes after the "
+        "edit (NOTEBOOK_SPEC 2.0 §5). On the build workstation's CPU the whole path took about 25 minutes after the "
         "downloads (expect longer on a 2-vCPU hosted runtime); a CUDA runtime is used automatically when present and finishes "
         "in a few minutes."
     ),
@@ -88,7 +88,7 @@ TEMPLATE = {
         "and fetched from the open-data bucket at run time. Each becomes a 192-px centre crop (the high-resolution "
         "reference) and a 96-px input made by bicubic 2× downsampling **and then JPEG compression at quality 40** — the "
         "kind of input a phone gallery or a web page actually hands to a super-resolver. On that input the frozen model is "
-        "*worse than bicubic interpolation* (the build record measured 25.7 dB against bicubic's 26.1 dB on the 96 test "
+        "*worse than bicubic interpolation* (the build record measured 25.9 dB against bicubic's 26.3 dB on the 96 test "
         "crops: it sharpens the block artefacts along with the edges), so the honest question is narrow: does a bounded "
         "fine-tuning of the last encoder stage and the reconstruction tail on 216 pairs move **PSNR** and **SSIM** on an "
         "image-disjoint test split, per species, past the two **non-neural baselines** (**bicubic** and **nearest-neighbour** "
@@ -115,7 +115,7 @@ TEMPLATE = {
         "512 px per side are refused — tile them yourself. The repository exposes none of these."
     ),
     "prerequisites": [
-        "- **Runtime:** a fresh supported runtime (Google Colab or Jupyter, Python 3.12). The default path runs on CPU (float32) and uses CUDA automatically when available. Swin2SR runs windowed attention over every input pixel, so time grows with input area: the build record measured about CPU_FROZEN_EVAL s to upscale and score the 96 test crops and CPU_ADAPT s for the five epochs of fine-tuning over 216 pairs with per-epoch validation scoring; the whole default path took CPU_TOTAL s on the build workstation's CPU with the snapshot and photographs already cached, and GPU_TOTAL s on an RTX 5070 Ti. A 2-vCPU hosted runtime will take longer. The pinned `torch==2.14.0` install is the largest download of the run; the checkpoint is 48 MB and the photographs about 39 MB.",
+        "- **Runtime:** a fresh supported runtime (Google Colab or Jupyter, Python 3.12). The default path runs on CPU (float32) and uses CUDA automatically when available. Swin2SR runs windowed attention over every input pixel, so time grows with input area: the build record measured about 71 s to upscale and score the 96 test crops and 1,315 s for the five epochs of fine-tuning over 216 pairs with per-epoch validation scoring; the whole default path took 1,523 s on the build workstation's CPU with the snapshot and photographs already cached, and 419 s on an RTX 5070 Ti. A 2-vCPU hosted runtime will take longer. The pinned `torch==2.14.0` install is the largest download of the run; the checkpoint is 48 MB and the photographs about 39 MB.",
         "- **Knowledge:** basic Python, NumPy and PIL image handling; what PSNR and SSIM measure and why neither is a perceptual quality score; why a self-made reference is a plumbing check and a held-out split under a stated degradation is a measurement of that degradation only.",
         "- **Data contract:** records are `{id, lr, hr}` — `hr` a PIL image (or a file decodable by Pillow) with sides that are multiples of 16 px within 16..1024 px, `lr` exactly half its size (the pair the model is asked to reverse), an optional `category` of at most 32 characters. Ids match `[A-Za-z0-9_.:-]{1,64}` and are unique; a dataset needs 8..5,000 records; splitting de-duplicates by decoded high-resolution pixels so no image lands in two splits; training records share one input size so they can be batched. BYOD accepts one zip (or directory) of high-resolution images plus an optional `labels.csv`; the notebook crops and degrades them itself.",
         "- **Validation is structural, not semantic:** every image is decoded and every pair's sizes checked, but nothing checks that a pair is aligned or that the degradation matches your deployment — a mismatched set is fine-tuned on without complaint.",
@@ -257,7 +257,7 @@ TEMPLATE = {
                 "baseline is the interpolation every image viewer applies and the reference point of the super-resolution "
                 "literature. The **frozen model** is scored by `pipe.evaluate`, which upscales every record's input through "
                 "`upscale` and scores the reconstruction. Expect the frozen model **below bicubic** on this input — the build "
-                "record measured 25.7 dB / 0.776 against bicubic's 26.1 dB / 0.789 — because a classical-SR model sharpens "
+                "record measured 25.9 dB / 0.785 against bicubic's 26.3 dB / 0.797 — because a classical-SR model sharpens "
                 "JPEG block edges as if they were detail; read the per-species rows to see that it holds for every species."
             ),
             "code": (
@@ -317,8 +317,8 @@ TEMPLATE = {
                 "The test crops were never used for training or epoch selection, and no image appears in two splits. The "
                 "adapted model is scored exactly as the frozen model was in Section 6, the four systems are put side by side "
                 "on both measures, and the per-species breakdown is repeated. Read it in this order: **PSNR** first (the "
-                "measure the epoch was selected on — the build record measured 25.7 → 26.6 dB, past bicubic's 26.1), then "
-                "**SSIM** (0.776 → 0.809, past bicubic's 0.789), then the per-species rows, where every species gained. The "
+                "measure the epoch was selected on — the build record measured 25.9 → 26.9 dB, past bicubic's 26.3), then "
+                "**SSIM** (0.785 → 0.816, past bicubic's 0.797), then the per-species rows, where every species gained. The "
                 "cell asserts the adapted PSNR is above the frozen one and reports whether it is above bicubic. Ninety-six "
                 "crops from one seeded split under one degradation give **no dispersion estimate**; the deltas are "
                 "sample-sanity evidence that the adaptation contract works, not a benchmark, and a gain under JPEG-40 "
@@ -359,8 +359,9 @@ TEMPLATE = {
             "md": (
                 "## 9. Look at the reconstructions, export the adapter and reload it\n\n"
                 "The synthetic scene from Section 5 is upscaled again by the adapted model — an image family the adaptation "
-                "never saw, so this is a small look at what the adaptation did *outside* its corpus (the build record's PSNR "
-                "is in the model card; a changed figure here is a finding to record, not a failure) — and four held-out "
+                "never saw, so this is a small look at what the adaptation did *outside* its corpus: the build record measured "
+                "37.1 dB frozen and 33.5 dB adapted on this clean, bicubic-only input — the adapted tail now expects JPEG "
+                "artefacts and smooths a clean image, a real cost of the adaptation to record, not a failure — and four held-out "
                 "crops are written as side-by-side panels (`outputs/{stem}_examples/`: input replicated 2×, bicubic, frozen, "
                 "adapted, reference) so the numbers can be checked by eye: the adapted panels should show the block edges "
                 "smoothed and the feather detail kept.\n\n"
@@ -431,8 +432,8 @@ TEMPLATE = {
         "## Interpretation and limits\n\n"
         "A classical-SR checkpoint given JPEG-compressed input does worse than bicubic interpolation — it sharpens the block "
         "artefacts as if they were detail — and a bounded fine-tuning of one encoder stage and the reconstruction tail on "
-        "216 pairs turns that around (PSNR 25.7 → 26.6 dB in the build record, past bicubic's 26.1; SSIM 0.776 → 0.809, past "
-        "0.789), consistently across the six species, with a 10 MB adapter that reloads pixel-for-pixel. That is the claim: the "
+        "216 pairs turns that around (PSNR 25.9 → 26.9 dB in the build record, past bicubic's 26.3; SSIM 0.785 → 0.816, past "
+        "0.797), consistently across the six species, with a 10 MB adapter that reloads pixel-for-pixel. That is the claim: the "
         "adaptation contract works end to end on a real paired set under a stated degradation, and the numbers it produces are "
         "read on two measures, per species, against two non-neural baselines and the frozen model rather than in isolation.\n\n"
         "The test split is 96 crops from one seeded draw of one sample under one degradation, the validation split that picks "
@@ -440,8 +441,9 @@ TEMPLATE = {
         "scores higher on PSNR even when a viewer prefers the sharper one. So a gain here says the contract works under "
         "JPEG-40 bicubic downsampling, not that the adapted model is better on your images, that it handles a camera's blur "
         "or noise, or that it is safe to trust synthesised detail: the model still invents plausible texture, and it has no "
-        "way to say so. Fine-tuning on a narrow set can also erode the model elsewhere; the synthetic scene re-upscaled in "
-        "Section 9 is one image of evidence about that, not a measurement.\n\n"
+        "way to say so. Fine-tuning on a narrow set also erodes the model elsewhere: the synthetic scene re-upscaled in "
+        "Section 9 — clean bicubic-only input, the degradation the checkpoint was built for — lost 3.6 dB in the build record "
+        "(37.1 → 33.5), one image of evidence that the adapted model is now a JPEG-input model, not a measurement.\n\n"
         "Three things to carry to real data. **Baselines first:** bicubic and nearest-neighbour upscales of *your* inputs, "
         "scored against *your* references, are the numbers to read before any adapted one, per subset. **Degradation:** the "
         "pairs the model learns from define what it learns to undo; make your LR inputs the way your deployment makes them "

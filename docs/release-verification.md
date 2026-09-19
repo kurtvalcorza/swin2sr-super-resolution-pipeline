@@ -145,7 +145,8 @@ stated runtime, not general estimates.
 
 | Date (UTC) | Commit / notebook blob | Executor | Path exercised | Wall | Outcome |
 |---|---|---|---|---|---|
-| PREFLIGHT_ROW |
+| 2026-09-20 | generated at `ae8eef9` / blob `4af52954ed42` | Local Windows-venv harness (`run_nb_local.py`: nbclient, fresh `python3` kernel, `CUDA_VISIBLE_DEVICES=-1`, `HF_HUB_OFFLINE=1`, `DIMER_NOTEBOOK_CI_PREINSTALLED=1`), Python 3.12.10, torch 2.14.0+cu130, transformers 4.57.6, snapshot and the 360 photographs pre-staged | Default sample path, all 11 code cells: pinned install skipped (pre-installed), `stage_missing_files` reported nothing to fetch, `verify_snapshot` PASS (4 files), 360 photographs re-hashed from the pre-staged cache, paired and split 216 / 48 / 96, four refusal probes raised, the synthetic scene upscaled (37.1 dB against its reference), baselines 25.29 / 26.31 dB, frozen test 25.92 dB / 0.785 in 70.8 s, five epochs 1,314.5 s (validation PSNR 25.90 → 26.40 → 26.57 → 26.68 → 26.74 → 26.79, epoch 5 kept), adapted test 26.91 dB / 0.816 (every species +0.8..1.2 dB; above bicubic on both measures), the scene re-upscaled at 33.5 dB (−3.6 dB on clean input — the adapted tail expects JPEG artefacts), four panels written, adapter 9,868,140 B / 126 tensors, reload parity 8/8 with max abs difference 0, 8 outputs written; the committed blob differs from the executed one in markdown prose and the recorded generating revision only (timing figures filled in after this run) | 1523.2 s | PASS — pre-flight only; not promotion evidence |
+| 2026-09-20 | generated at `ae8eef9` / blob `4af52954ed42` | Local WSL harness (same `run_nb_local.py`, `CUDA_VISIBLE_DEVICES=0`), Python 3.12.3, torch 2.14.0+cu130, RTX 5070 Ti (`cuda:0`), snapshot and photographs pre-staged | Default sample path, all 11 code cells; frozen 25.92 / 0.785 in 12.1 s, five epochs 312.9 s, epoch 5 kept, adapted 26.91 / 0.816, scene 37.1 → 33.5 dB, reload parity 8/8 — identical to the CPU row to three decimals | 419.4 s | PASS — pre-flight only; not promotion evidence |
 
 ## Current status
 
@@ -162,4 +163,5 @@ so the adaptation's gain (to 26.9 dB / 0.816 SSIM, past bicubic on both measures
 mismatch and says nothing about other degradations; both measures are reference-based signal fidelity, not
 perceptual quality; the 48-crop validation split selects the epoch and the training loss was still falling at epoch
 five, so the recipe is bounded by budget rather than convergence; and the synthetic scene re-upscaled after
-adaptation is one image of evidence about behaviour outside the corpus, not a measurement.
+adaptation — clean bicubic-only input — lost 3.6 dB (37.1 → 33.5) in both pre-flights: the adapted tail now expects
+JPEG artefacts and smooths a clean image, which is what "one stated degradation" costs.
