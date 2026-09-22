@@ -44,7 +44,7 @@ The task is 2x single-image super-resolution: input one RGB still (`PIL.Image.Im
 
 ###### Primary Intended Users
 
-Intended users are machine-learning engineers, imaging researchers, and application developers integrating a fixed-factor upscaler into research prototypes, internal enterprise tooling, or the DIMER workbench. A user is expected to understand that super-resolution hallucinates plausible detail rather than recovering true detail, that PSNR against a single reference is a sanity check and not a benchmark, that the output is only 2x (chaining calls compounds artefacts), and that the CPU cost grows with input area (34 s for 512x512, the ceiling, on the reference machine). Users who need arbitrary scale factors, denoising, JPEG-artefact removal, or face-specific restoration are expected to know none of that is provided here.
+Intended users are machine-learning engineers, imaging researchers, and application developers integrating a fixed-factor upscaler into research prototypes or internal enterprise tooling. A user is expected to understand that super-resolution hallucinates plausible detail rather than recovering true detail, that PSNR against a single reference is a sanity check and not a benchmark, that the output is only 2x (chaining calls compounds artefacts), and that the CPU cost grows with input area (34 s for 512x512, the ceiling, on the reference machine). Users who need arbitrary scale factors, denoising, JPEG-artefact removal, or face-specific restoration are expected to know none of that is provided here.
 
 ###### Out-of-scope use cases
 
