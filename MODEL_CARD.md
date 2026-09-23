@@ -40,7 +40,7 @@ The uses below are the ones the package was built to support; everything else is
 
 ###### Primary Intended Uses
 
-The task is 2x single-image super-resolution: input one RGB still (`PIL.Image.Image`, any mode, converted to RGB) of side 8–512 px; output a uint8 array of shape `(2H, 2W, 3)` plus `scale`, `input_size`, `output_size`. Envisioned applications are enlarging small photographs or thumbnails for display, preparing low-resolution archival or product images for print or web layouts, and upsampling frames before a downstream detector or OCR stage that expects more pixels than the source provides. The checkpoint is the *classical* SR variant trained on bicubic-downsampled images, so the intended input is a clean image that was downscaled, not a compressed, noisy, or blurred one (upstream ships separate compressed-input and real-world variants that are not packaged here). Within DIMER the pipeline is an inference component and a baseline, not an image-authentication tool.
+The task is 2x single-image super-resolution: input one RGB still (`PIL.Image.Image`, any mode, converted to RGB) of side 8–512 px; output a uint8 array of shape `(2H, 2W, 3)` plus `scale`, `input_size`, `output_size`. Envisioned applications are enlarging small photographs or thumbnails for display, preparing low-resolution archival or product images for print or web layouts, and upsampling frames before a downstream detector or OCR stage that expects more pixels than the source provides. The checkpoint is the *classical* SR variant trained on bicubic-downsampled images, so the intended input is a clean image that was downscaled, not a compressed, noisy, or blurred one (upstream ships separate compressed-input and real-world variants that are not packaged here). The pipeline is an inference component and a baseline, not an image-authentication tool.
 
 ###### Primary Intended Users
 
@@ -113,7 +113,7 @@ This pipeline is not intended for decisions in health, safety, criminal justice,
 
 ###### Use cases
 
-Prohibited even where the model would work: enhancing images for covert surveillance, biometric identification, or demographic profiling; presenting upscaled output as authentic evidence or as a faithful record of a document, face, or scene; social scoring; and any use that discriminates unlawfully in employment, housing, credit, insurance, education, or healthcare access. Also prohibited are deceptive or non-consensual uses — enhancing intimate or private images, or restoring content whose subject has not consented — and any use that violates the upstream Apache-2.0 licence terms, the DIMER deployment terms, or the data-protection obligations attached to the images processed.
+Prohibited even where the model would work: enhancing images for covert surveillance, biometric identification, or demographic profiling; presenting upscaled output as authentic evidence or as a faithful record of a document, face, or scene; social scoring; and any use that discriminates unlawfully in employment, housing, credit, insurance, education, or healthcare access. Also prohibited are deceptive or non-consensual uses — enhancing intimate or private images, or restoring content whose subject has not consented — and any use that violates the upstream Apache-2.0 licence terms, the terms of the deployment that runs the pipeline, or the data-protection obligations attached to the images processed.
 
 ## Immutable provenance
 
