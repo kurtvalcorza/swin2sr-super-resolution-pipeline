@@ -343,6 +343,9 @@ class Swin2SRPipeline:
     _model: Any = field(default=None, repr=False)
     weight_sha256: str | None = None
     adapter: dict[str, Any] | None = None
+    # Pinned-base values of every tensor adapt() or load_artifact() has changed, kept the first time each is about to
+    # change: every adaptation starts from the verified base, never from a previous run (review finding S2R-M2).
+    _base_state: dict[str, Any] = field(default_factory=dict, repr=False)
 
     @classmethod
     def from_pretrained(
@@ -458,8 +461,9 @@ class Swin2SRPipeline:
         high-resolution reference. Only the last `trainable_stages` encoder stages, the convolution after the body,
         the upsampler and the final convolution receive gradients; AdamW (no weight decay), gradient clipping at
         1.0, seeded shuffling, no scheduler. Epoch 0 records the frozen model's validation metrics; the epoch with
-        the highest validation PSNR is kept (the final one without a validation split). On any exception the frozen
-        weights are restored."""
+        the highest validation PSNR is kept (the final one without a validation split). Every call starts from the
+        pinned base: tensors an earlier adapt() or load_artifact() changed are restored first. On any exception the
+        weights are put back as they were before the call."""
         model = self._require_model()  # refuse before importing torch
         import torch
 
@@ -479,8 +483,14 @@ class Swin2SRPipeline:
         names = _trainable_names(model, trainable_stages)
         device = torch.device(self.device)
         name_set = set(names)
-        frozen_state = {k: v.detach().clone() for k, v in model.state_dict().items() if k in name_set}
+        # Every call starts from the pinned base (epoch 0 is the frozen model whatever ran before, whichever stages it
+        # trained); a failed call puts the weights back as they were before it.
+        touched = name_set | set(self._base_state)
+        previous_state = {k: v.detach().clone() for k, v in model.state_dict().items() if k in touched}
         previous_adapter = self.adapter
+        self._remember_base(model, names)
+        restored = self.restore_base()
+        frozen_state = {k: v.detach().clone() for k, v in model.state_dict().items() if k in name_set}
         history: list[dict[str, Any]] = []
         started = time.perf_counter()
 
@@ -541,7 +551,7 @@ class Swin2SRPipeline:
                 param.requires_grad_(False)
             model.eval()
         except BaseException:
-            model.load_state_dict(frozen_state, strict=False)
+            model.load_state_dict(previous_state, strict=False)
             for param in model.parameters():
                 param.requires_grad_(False)
             model.eval()
@@ -562,11 +572,29 @@ class Swin2SRPipeline:
             "n_train": len(train_checked),
             "n_val": len(val_checked) if val_checked is not None else 0,
             "lr_size": list(next(iter(sizes))),
+            "started_from": "pinned base" + (f" (restored {len(restored)} tensors changed by an earlier run)" if restored else ""),
             "history": history,
             "seconds": round(time.perf_counter() - started, 3),
         }
         return dict(self.adapter)
 
+
+    def _remember_base(self, model: Any, names: Sequence[str]) -> None:
+        state = model.state_dict()
+        for name in names:
+            if name not in self._base_state:
+                self._base_state[name] = state[name].detach().clone()
+
+    def restore_base(self) -> list[str]:
+        """Put the model back to the pinned base: undo every earlier adapt() or load_artifact() overlay. Returns the
+        names of the restored tensors (empty when the model was never changed)."""
+        model = self._require_model()
+        restored = sorted(self._base_state)
+        if restored:
+            model.load_state_dict(dict(self._base_state), strict=False)
+            model.eval()
+        self.adapter = None
+        return restored
 
     def save_artifact(self, output_dir: str | Path, metadata: Mapping[str, Any] | None = None) -> Path:
         """Write the trained tensors as safetensors plus a manifest naming the base, the digests and the training
@@ -623,6 +651,8 @@ class Swin2SRPipeline:
         for name, tensor in tensors.items():
             if tuple(tensor.shape) != tuple(state[name].shape):
                 raise ValueError(f"artifact tensor {name} has shape {tuple(tensor.shape)}, base has {tuple(state[name].shape)}")
+        self._remember_base(model, expected)
+        self.restore_base()
         model.load_state_dict({k: v.to(state[k].device, state[k].dtype) for k, v in tensors.items()}, strict=False)
         model.eval()
         self.adapter = {**manifest["adapter"], "trainable_names": expected, "history": manifest.get("history", [])}
