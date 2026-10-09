@@ -77,6 +77,16 @@ def test_s2r_m1_carried_lock_is_the_committed_lock_and_pins_every_runtime_pin(no
     build.check_lock(build._pins(ROOT), lock_text)
 
 
+def test_s2r_m1_routed_cells_use_the_worker_display_not_ipython(notebook):
+    """Every cell after Section 1 runs in the isolated environment, which has no IPython: a routed cell that imports
+    IPython.display would fail or silently lose its output. The worker injects `display` into the cell namespace."""
+    routed = [c["source"] for c in _code_cells(notebook) if "# dimer: kernel cell" not in c["source"]]
+    assert routed and not [s for s in routed if re.search(r"^\s*(from|import) IPython", s, re.M)]
+    kernel = _cell(notebook, "# dimer: kernel cell")
+    assert "_main.__dict__.update(__builtins__=builtins, display=display)" in kernel
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="the worker protocol uses Linux pass_fds and a symlinked interpreter (as in rtdetr-detection-pipeline 0feefe5)")
 def test_s2r_m1_section_1_is_idempotent_and_keeps_the_live_worker(notebook, tmp_path, monkeypatch, capsys):
     """The real Section 1 cell, run twice with a stand-in interpreter: the matching environment is reused (no
     download) and the live worker — with every variable later cells created — is kept."""
@@ -162,7 +172,8 @@ def test_s2r_m2_restore_base_undoes_every_earlier_change_stand_in():
     pipe._remember_base(model, names)
     model.params[names[0]] += 5  # an earlier adaptation
     pipe.adapter = {"best_epoch": 3}
-    assert pipe.restore_base() == names and pipe.adapter is None
+    assert pipe.restore_base() == [names[0]] and pipe.adapter is None  # only the changed tensor is reported
+    assert pipe.restore_base() == []  # nothing differs from the base any more
     assert (model.params[names[0]] == 0).all() and (model.params[names[1]] == 1).all()
     pipe._remember_base(model, names)  # a second call keeps the first (base) values
     model.params[names[1]] += 2

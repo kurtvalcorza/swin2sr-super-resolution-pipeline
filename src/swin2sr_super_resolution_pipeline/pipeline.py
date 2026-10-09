@@ -589,7 +589,10 @@ class Swin2SRPipeline:
         """Put the model back to the pinned base: undo every earlier adapt() or load_artifact() overlay. Returns the
         names of the restored tensors (empty when the model was never changed)."""
         model = self._require_model()
-        restored = sorted(self._base_state)
+        state = model.state_dict()
+        # Only tensors whose live value differs from the base count as restored, so a first adapt() on the
+        # untouched base reports "pinned base" without claiming an earlier run changed anything.
+        restored = sorted(n for n, base in self._base_state.items() if not bool((state[n] == base).all()))
         if restored:
             model.load_state_dict(dict(self._base_state), strict=False)
             model.eval()

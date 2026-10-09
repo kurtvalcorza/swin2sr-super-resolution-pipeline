@@ -1,4 +1,4 @@
-"""Per-repository template for tools/build_notebook.py (NOTEBOOK_SPEC 2.0 §4 standalone carrier).
+"""Per-repository template for tools/build_notebook.py (NOTEBOOK_SPEC 2.2 §4 standalone carrier).
 
 Only the task-specific prose and stage cells live here. Runtime install, the embedded package (three modules,
 carried verbatim in dependency order), and the model pin/stage/verify cells are produced by the generator from
@@ -83,7 +83,7 @@ TEMPLATE = {
         "again per species, re-upscales the scene and four held-out crops with the adapted model, exports the adapter as "
         "safetensors with a manifest, and reloads that artifact into a fresh pipeline to verify pixel parity. The default "
         "path needs no repository clone, no DIMER worker or service, no credential, no upload dialog and no configuration "
-        "edit (NOTEBOOK_SPEC 2.0 §5). On the build workstation's CPU the whole path took about 25 minutes after the "
+        "edit (NOTEBOOK_SPEC 2.2 §5). On the build workstation's CPU the whole path took about 25 minutes after the "
         "downloads (expect longer on a 2-vCPU hosted runtime); a CUDA runtime is used automatically when present and finishes "
         "in a few minutes."
     ),
@@ -688,6 +688,6 @@ TEMPLATE = {
         "- Upstream code: https://github.com/mv-lab/swin2sr\n"
         "- Swin2SR: SwinV2 Transformer for Compressed Image Super-Resolution and Restoration (Conde, Choi, Burchi, Timofte, 2022): https://arxiv.org/abs/2209.11345\n"
         "- iNaturalist open data (CC0 photographs, each observer's own licence): https://www.inaturalist.org/pages/developers — bucket https://inaturalist-open-data.s3.amazonaws.com/\n"
-        "- DIMER Notebook Specification 2.0 and Model Card Specification 1.1 (fleet specs in the ml-worker repository)"
+        "- DIMER Notebook Specification 2.2 and Model Card Specification 1.1 (fleet specs in the ml-worker repository)"
     ),
 }
