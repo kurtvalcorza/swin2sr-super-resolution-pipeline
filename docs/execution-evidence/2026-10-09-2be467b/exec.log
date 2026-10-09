@@ -1,0 +1,71 @@
+[colab] Parsing notebook '/home/kurt/colab-runs/swin2sr-super-resolution-pipeline-2be467b-1c233a/swin2sr_super_resolution_colab_2be467b_colab-cli-t4.ipynb'...
+[colab] Executing cell 1/13 - Infrastructure: build (or reuse) the isolated environment and route later cells to it...
+{'isolated_environment': '/content/dimer_isolated_env_f9a6f1c8416f', 'reused': False, 'isolated_python': '3.12.12', 'kernel_python': '3.13.15', 'locked_packages': 47, 'setup_seconds': 55}
+{'routed_to': '/content/dimer_isolated_env_f9a6f1c8416f/bin/python', 'worker_pid': 6330, 'worker_reused': False}
+[colab] Executing cell 2/13 - Infrastructure: record the runtime...
+{'notebook_source': {'repository': 'swin2sr-super-resolution-pipeline', 'repository_revision': 'a1e659a657c514e88e4c96f40973fe2098750dba', 'embedded_module': 'src/swin2sr_super_resolution_pipeline/pipeline.py', 'embedded_modules': ['src/swin2sr_super_resolution_pipeline/pipeline.py', 'src/swin2sr_super_resolution_pipeline/metrics.py', 'src/swin2sr_super_resolution_pipeline/samples.py'], 'module_sha256': '46e67bf53dc5a590808e95aee090e1b829ff946c35220cc894efd1655cb405ac', 'generator': 'build_notebook.py/2.2', 'notebook_spec': '2.2'}, 'python': '3.12.12', 'executable': '/content/dimer_isolated_env_f9a6f1c8416f/bin/python', 'torch': '2.14.0+cu130', 'transformers': '4.57.6', 'cuda': True}
+[colab] Executing cell 3/13 - swin2sr_super_resolution-08...
+[colab] Executing cell 4/13 - swin2sr_super_resolution-10...
+[colab] Executing cell 5/13 - swin2sr_super_resolution-12...
+[colab] Executing cell 6/13 - Infrastructure: stage and digest-verify the pinned snapshot, then load the model...
+{'model_id': 'caidas/swin2SR-classical-sr-x2-64', 'revision': 'cee1c923c6a37361c6e5650b65dcf4be821e5d52', 'license': 'apache-2.0', 'files': 4, 'total_bytes': 48462226}
+{'weights_dir': '/content/weights/swin2sr-x2-64', 'fetched': ['README.md', 'config.json', 'model.safetensors', 'preprocessor_config.json']}
+{'verified_files': 4, 'revision': 'cee1c923c6a37361c6e5650b65dcf4be821e5d52'}
+`self.pad_size` attribute is deprecated and will be removed in v5. Use `self.size_divisor` instead
+{'device': 'cuda:0', 'source': 'local-snapshot'}
+[colab] Executing cell 7/13 - swin2sr_super_resolution-16...
+{'data_source': "iNaturalist CC0 bird photographs (six species): iNaturalist open data: research-grade observations whose photos carry the CC0 1.0 licence, one photo per observer per species, fetched from the open-data bucket by photo id (CC0 1.0 (each photo's licence as published by its observer on iNaturalist; attribution is kept per record))", 'raw_rows': {'photographs': 360, 'bytes': 39223447, 'observers': 222}, 'splits': {'train': 216, 'validation': 48, 'test': 96}, 'observer_overlap': {'observers': 222, 'in_more_than_one_split': 53}, 'degradation': {'hr_crop': 192, 'downsample': 'bicubic x2', 'jpeg_quality': 40}}
+{'train': {'n': 216, 'category_counts': {'american_goldfinch': 36, 'chipping_sparrow': 36, 'dark_eyed_junco': 36, 'house_finch': 36, 'song_sparrow': 36, 'white_throated_sparrow': 36}, 'hr_side': {'min': 192, 'max': 192}, 'digest': '7643d3e91cd27d46...'}}
+{'validation': {'n': 48, 'category_counts': {'american_goldfinch': 8, 'chipping_sparrow': 8, 'dark_eyed_junco': 8, 'house_finch': 8, 'song_sparrow': 8, 'white_throated_sparrow': 8}, 'hr_side': {'min': 192, 'max': 192}, 'digest': '77f75cedb1b9d04b...'}}
+{'test': {'n': 96, 'category_counts': {'american_goldfinch': 16, 'chipping_sparrow': 16, 'dark_eyed_junco': 16, 'house_finch': 16, 'song_sparrow': 16, 'white_throated_sparrow': 16}, 'hr_side': {'min': 192, 'max': 192}, 'digest': '6ebedd2b31e39045...'}}
+{'example': {'id': 'house_finch-56', 'category': 'house_finch', 'hr': [192, 192], 'lr': [96, 96], 'observation': 'https://www.inaturalist.org/observations/12337763'}}
+{'probe': 'duplicate id', 'rejected': "duplicate id 'same'"}
+{'probe': 'input is not half its reference', 'rejected': 'records[0]: lr (192, 192) is not hr (192, 192) downscaled by 2'}
+{'probe': 'reference sides not multiples of 16', 'rejected': 'records[0]: hr sides must be multiples of 16 px, got (200, 200)'}
+{'probe': 'too small', 'rejected': '3 records; 8..5000 are required'}
+[colab] Executing cell 8/13 - swin2sr_super_resolution-19...
+{'ceilings': {'MIN_INPUT_SIDE': 8, 'MAX_INPUT_SIDE': 512, 'UPSCALE': 2, 'HR_CROP': 192, 'MIN_RECORDS': 8, 'MAX_RECORDS': 5000, 'device': 'cuda:0'}}
+{'scene': 'synthetic_shapes_64x48.png', 'sha256': {'input': 'f73fc0c90e455c03...', 'reference': '35897aa59a8e1128...'}, 'manifest_verdict': 'accepted', 'findings': 1}
+<isolated cell 7>:6: DeprecationWarning: 'mode' parameter is deprecated and will be removed in Pillow 13 (2026-10-15)
+  scene_reference = Image.fromarray(np.rint(np.stack([red, green, blue], axis=-1)).astype(np.uint8), mode='RGB')
+{'frozen': {'seconds': 0.57, 'checks': {'shape': True, 'dtype_uint8': True, 'output_size_reported': True, 'identity_reported': True}, 'psnr': {'psnr': 37.1}, 'bicubic_baseline': {'psnr': 29.73}, 'verdict': 'sample-sanity'}}
+<isolated cell 7>:38: DeprecationWarning: 'mode' parameter is deprecated and will be removed in Pillow 13 (2026-10-15)
+  Image.fromarray(array, mode='RGB').save(f'outputs/swin2sr_super_resolution_output_{label}.png')
+[colab] Executing cell 9/13 - swin2sr_super_resolution-22...
+{'nearest_baseline': {'psnr': 25.289, 'ssim': 0.764}, 'n': 96, 'note': 'nearest-neighbour 2x interpolation of the LR input'}
+{'bicubic_baseline': {'psnr': 26.314, 'ssim': 0.797}, 'note': 'bicubic 2x interpolation of the LR input'}
+{'frozen_model_test': {'psnr': 25.923, 'ssim': 0.785}, 'n': 96, 'verdict': 'measured', 'seconds': 24.8}
+{'definitions': {'psnr': 'mean peak signal-to-noise ratio in dB over the RGB channels of the reconstruction against the reference (255 peak); higher is better, unbounded', 'ssim': 'mean structural similarity on the luma channel (11-tap Gaussian window, sigma 1.5, 5-px border excluded); in -1..1, higher is better'}}
+{'by_species_frozen': {'american_goldfinch': {'n': 16, 'psnr': 26.73, 'ssim': 0.832}, 'chipping_sparrow': {'n': 16, 'psnr': 25.81, 'ssim': 0.764}, 'dark_eyed_junco': {'n': 16, 'psnr': 25.76, 'ssim': 0.766}, 'house_finch': {'n': 16, 'psnr': 26.17, 'ssim': 0.796}, 'song_sparrow': {'n': 16, 'psnr': 25.57, 'ssim': 0.781}, 'white_throated_sparrow': {'n': 16, 'psnr': 25.48, 'ssim': 0.77}}}
+{'frozen_vs_baselines': {'above_nearest': True, 'above_bicubic': False}}
+[colab] Executing cell 10/13 - swin2sr_super_resolution-25...
+{'epoch': 0, 'train_loss': None, 'val_psnr': 25.899, 'val_ssim': 0.767, 'note': 'frozen model'}
+{'epoch': 1, 'train_loss': 0.03622, 'val_psnr': 26.4, 'val_ssim': 0.782}
+{'epoch': 2, 'train_loss': 0.035, 'val_psnr': 26.569, 'val_ssim': 0.788}
+{'epoch': 3, 'train_loss': 0.03434, 'val_psnr': 26.684, 'val_ssim': 0.79}
+{'epoch': 4, 'train_loss': 0.03392, 'val_psnr': 26.745, 'val_ssim': 0.793}
+{'epoch': 5, 'train_loss': 0.03368, 'val_psnr': 26.784, 'val_ssim': 0.795}
+{'trainable_parameters': 2463011, 'total_parameters': 12091571, 'best_epoch': 5, 'selection': 'highest validation PSNR', 'loss': 'L1 between the reconstruction and the high-resolution reference (0..1 scale)', 'started_from': 'pinned base', 'seconds': 316.7}
+[colab] Executing cell 11/13 - swin2sr_super_resolution-28...
+{'psnr': {'nearest': 25.289, 'bicubic': 26.314, 'frozen': 25.923, 'adapted': 26.914}}
+{'ssim': {'nearest': 0.764, 'bicubic': 0.797, 'frozen': 0.785, 'adapted': 0.816}}
+{'delta_vs_frozen': {'psnr': 0.991, 'ssim': 0.032}}
+{'delta_vs_bicubic': {'psnr': 0.6, 'ssim': 0.019}}
+{'by_species': {'american_goldfinch': {'n': 16, 'frozen_psnr': 26.73, 'adapted_psnr': 27.87, 'frozen_ssim': 0.832, 'adapted_ssim': 0.871}, 'chipping_sparrow': {'n': 16, 'frozen_psnr': 25.81, 'adapted_psnr': 26.61, 'frozen_ssim': 0.764, 'adapted_ssim': 0.788}, 'dark_eyed_junco': {'n': 16, 'frozen_psnr': 25.76, 'adapted_psnr': 26.97, 'frozen_ssim': 0.766, 'adapted_ssim': 0.801}, 'house_finch': {'n': 16, 'frozen_psnr': 26.17, 'adapted_psnr': 27.35, 'frozen_ssim': 0.796, 'adapted_ssim': 0.827}, 'song_sparrow': {'n': 16, 'frozen_psnr': 25.57, 'adapted_psnr': 26.36, 'frozen_ssim': 0.781, 'adapted_ssim': 0.811}, 'white_throated_sparrow': {'n': 16, 'frozen_psnr': 25.48, 'adapted_psnr': 26.31, 'frozen_ssim': 0.77, 'adapted_ssim': 0.8}}}
+{'verdicts': {'frozen_vs_baselines': {'above_nearest': True, 'above_bicubic': False}, 'adapted_vs_frozen_psnr': 'improved', 'adapted_above_bicubic': True}}
+{'report': 'outputs/swin2sr_super_resolution_evaluation_report.json', 'verdicts': {'frozen_vs_baselines': {'above_nearest': True, 'above_bicubic': False}, 'adapted_vs_frozen_psnr': 'improved', 'adapted_above_bicubic': True}}
+[colab] Executing cell 12/13 - swin2sr_super_resolution-31...
+{'adapted': {'seconds': 0.095, 'checks': {'shape': True, 'dtype_uint8': True, 'output_size_reported': True, 'identity_reported': True}, 'psnr': {'psnr': 33.47}, 'bicubic_baseline': {'psnr': 29.73}, 'verdict': 'sample-sanity'}}
+`self.pad_size` attribute is deprecated and will be removed in v5. Use `self.size_divisor` instead
+<isolated cell 11>:13: DeprecationWarning: 'mode' parameter is deprecated and will be removed in Pillow 13 (2026-10-15)
+  Image.fromarray(frozen_base.upscale(record['lr'])['image'], mode='RGB'),
+<isolated cell 11>:14: DeprecationWarning: 'mode' parameter is deprecated and will be removed in Pillow 13 (2026-10-15)
+  Image.fromarray(pipe.upscale(record['lr'])['image'], mode='RGB'),
+{'examples': ['chipping_sparrow-45.png', 'chipping_sparrow-47.png', 'dark_eyed_junco-27.png', 'house_finch-05.png'], 'panel_order': ['input x2 nearest', 'bicubic', 'frozen', 'adapted', 'reference']}
+{'artifact': 'outputs/swin2sr_super_resolution_adapter', 'format': 'org.valcorza.swin2sr-x2-64.adapter.v1', 'tensors': 126, 'bytes': 9868140, 'sha256': 'e96f1c2b8d470716...'}
+`self.pad_size` attribute is deprecated and will be removed in v5. Use `self.size_divisor` instead
+{'reload_parity': {'identical_images': 8, 'of': 8, 'max_abs_difference': 0}, 'reloaded_best_epoch': 5}
+['swin2sr_super_resolution_adapter', 'swin2sr_super_resolution_evaluation_report.json', 'swin2sr_super_resolution_examples', 'swin2sr_super_resolution_input_manifest.json', 'swin2sr_super_resolution_output_adapted.png', 'swin2sr_super_resolution_output_frozen.png', 'swin2sr_super_resolution_result.json', 'swin2sr_super_resolution_train.csv']
+[colab] Executing cell 13/13 - swin2sr_super_resolution-34...
+{'experiment': 'skipped (RUN_EXPERIMENT = False); the default path above is complete'}
+[colab] Saving notebook with outputs to '/home/kurt/colab-runs/swin2sr-super-resolution-pipeline-2be467b-1c233a/swin2sr_super_resolution_colab_2be467b_colab-cli-t4_output.ipynb'...
