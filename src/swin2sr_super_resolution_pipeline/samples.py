@@ -3911,6 +3911,24 @@ def observer_overlap(splits: Mapping[str, Sequence[Mapping[str, Any]]]) -> dict[
     return {"observers": len(seen), "in_more_than_one_split": sum(1 for s in seen.values() if len(s) > 1)}
 
 
+def _split_sizes(n: int, val_fraction: float, test_fraction: float) -> tuple[int, int, int]:
+    """(train, validation, test) that `split_dataset` cuts from `n` distinct images."""
+    n_test = max(1, round(n * test_fraction))
+    n_val = round(n * val_fraction)
+    return n - n_test - n_val, n_val, n_test
+
+
+def min_byod_records(*, val_fraction: float = 0.15, test_fraction: float = 0.2) -> dict[str, int]:
+    """The smallest dataset `split_dataset` accepts with these fractions: `MIN_RECORDS` training images and (when
+    `val_fraction` > 0) at least one validation image, after at least one test image is held out. With the default
+    fractions that is 12 distinct usable photographs, split 8 / 2 / 2."""
+    for n in range(1, MAX_RECORDS + 1):
+        train, val, test = _split_sizes(n, val_fraction, test_fraction)
+        if train >= MIN_RECORDS and (val >= 1 or val_fraction == 0):
+            return {"total": n, "train": train, "validation": val, "test": test}
+    raise ValueError("no dataset size satisfies these fractions")
+
+
 def split_dataset(
     records: Sequence[Mapping[str, Any]],
     *,
@@ -3918,7 +3936,9 @@ def split_dataset(
     test_fraction: float = 0.2,
     seed: int = 0,
 ) -> dict[str, list[dict[str, Any]]]:
-    """Seeded shuffle of a BYOD dataset into train/validation/test after de-duplicating high-resolution images."""
+    """Seeded shuffle of a BYOD dataset into train/validation/test after de-duplicating high-resolution images. The
+    training split must hold `MIN_RECORDS` images and the validation split (when `val_fraction` > 0) at least one; the
+    refusal names the split and the minimum total (`min_byod_records`)."""
     if not (0.0 <= val_fraction < 1.0 and 0.0 < test_fraction < 1.0 and val_fraction + test_fraction < 1.0):
         raise ValueError("fractions must satisfy 0 <= val < 1, 0 < test < 1, val + test < 1")
     checked = validate_dataset(records)["records"]
@@ -3931,51 +3951,101 @@ def split_dataset(
             unique.append(record)
     random.Random(seed).shuffle(unique)
     n = len(unique)
-    n_test = max(1, round(n * test_fraction))
-    n_val = round(n * val_fraction)
-    if n - n_test - n_val < 1:
-        raise ValueError(f"{n} distinct images are too few to split into train/validation/test")
+    n_train, n_val, n_test = _split_sizes(n, val_fraction, test_fraction)
+    if n_train < MIN_RECORDS or (val_fraction > 0 and n_val < 1):
+        need = min_byod_records(val_fraction=val_fraction, test_fraction=test_fraction)
+        short = "training split" if n_train < MIN_RECORDS else "validation split"
+        raise ValueError(
+            f"{n} distinct images ({len(checked) - n} duplicate image(s) removed) leave the {short} with "
+            f"{n_train if n_train < MIN_RECORDS else n_val} image(s); the training split needs {MIN_RECORDS} and the "
+            f"validation split 1, so supply at least {need['total']} distinct usable photographs (split {need['train']} / "
+            f"{need['validation']} / {need['test']})"
+        )
     return {"test": unique[:n_test], "validation": unique[n_test : n_test + n_val], "train": unique[n_test + n_val :]}
 
 
-def load_byod_dataset(path: str | Path, *, crop: int = HR_CROP, quality: int = JPEG_QUALITY) -> list[dict[str, Any]]:
-    """Records from a directory or zip of high-resolution images (optionally with `labels.csv`: `id`, `file`,
-    `category`): each image is centre-cropped to `crop` px (images smaller than the crop are skipped) and its LR
-    input generated with `degrade`, so BYOD pairs follow the same degradation as the sample."""
+_IMAGE_SUFFIXES = (".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".webp", ".gif")
+
+
+def _skipped_member(relative: str) -> bool:
+    """Operating-system litter that is never data: macOS resource forks and hidden files."""
+    return any(part == "__MACOSX" or part.startswith(".") for part in Path(relative).parts)
+
+
+def load_byod_dataset(
+    path: str | Path, *, crop: int = HR_CROP, quality: int = JPEG_QUALITY, report: dict[str, Any] | None = None
+) -> list[dict[str, Any]]:
+    """Records from a directory or zip of high-resolution images (optionally with one `labels.csv`: `id`, `file`,
+    `category`): each image is centre-cropped to `crop` px and its LR input generated with `degrade`, so BYOD pairs
+    follow the same degradation as the sample. `labels.csv` rows name images by their path relative to the folder
+    holding `labels.csv` (a bare file name also matches when it is unique). Two images with the same file name in
+    different folders are refused, never overwritten. Nothing is dropped silently: images smaller than the crop,
+    `__MACOSX` entries, hidden files and non-image files are skipped and listed with the reason in
+    `report["skipped"]`."""
     source = Path(path)
-    members: dict[str, bytes] = {}
+    found: dict[str, bytes] = {}
     if source.is_dir():
         for file in sorted(source.rglob("*")):
             if file.is_file():
-                members[file.name] = file.read_bytes()
+                found[file.relative_to(source).as_posix()] = file.read_bytes()
     elif zipfile.is_zipfile(source):
         with zipfile.ZipFile(source) as archive:
             for info in archive.infolist():
                 if not info.is_dir():
-                    members[Path(info.filename).name] = archive.read(info)  # flattened; no extractall
+                    found[info.filename] = archive.read(info)  # read in memory; no extractall
     else:
         raise ValueError(f"{source} is neither a directory nor a zip file")
+    skipped: list[dict[str, str]] = []
+    images: dict[str, bytes] = {}
+    by_name: dict[str, str] = {}
+    tables = []
+    for rel, data in sorted(found.items()):
+        name = Path(rel).name
+        if _skipped_member(rel):
+            skipped.append({"file": rel, "reason": "operating-system file (__MACOSX or hidden)"})
+        elif name == "labels.csv":
+            tables.append(rel)
+        elif Path(name).suffix.lower() not in _IMAGE_SUFFIXES:
+            skipped.append({"file": rel, "reason": "not an image file"})
+        else:
+            if name in by_name:
+                raise ValueError(f"two images share the file name {name!r} ({by_name[name]} and {rel}); rename one of them")
+            by_name[name] = rel
+            images[rel] = data
+    if len(tables) > 1:
+        raise ValueError(f"BYOD data holds more than one labels.csv: {', '.join(tables)}")
     labels: dict[str, tuple[str, str]] = {}
-    if "labels.csv" in members:
-        for row in csv.DictReader(io.StringIO(members["labels.csv"].decode("utf-8-sig"))):
-            labels[str(row.get("file", "")).strip()] = (str(row.get("id", "")).strip(), str(row.get("category", "")).strip())
+    if tables:
+        base = Path(tables[0]).parent
+        reader = csv.DictReader(io.StringIO(found[tables[0]].decode("utf-8-sig")))
+        if "file" not in (reader.fieldnames or []):
+            raise ValueError("labels.csv must have the column file (and optionally id, category)")
+        for line, row in enumerate(reader, start=2):
+            listed = str(row.get("file", "") or "").strip()
+            rel = (base / listed).as_posix() if str(base) != "." else listed
+            if rel not in images and listed in by_name:
+                rel = by_name[listed]
+            if rel not in images:
+                raise ValueError(f"labels.csv line {line} (file {listed!r}): names an image that is not in the dataset")
+            labels[rel] = (str(row.get("id", "") or "").strip(), str(row.get("category", "") or "").strip())
     out = []
-    for name, data in members.items():
-        if name == "labels.csv":
-            continue
+    for rel, data in images.items():
         try:
             image = Image.open(io.BytesIO(data))
             image.load()
         except Exception as exc:  # noqa: BLE001
-            raise ValueError(f"BYOD file is not a decodable image: {name}") from exc
+            raise ValueError(f"BYOD file is not a decodable image: {rel}") from exc
         if min(image.size) < crop:
+            skipped.append({"file": rel, "reason": f"smaller than the {crop}-px crop ({image.size[0]}x{image.size[1]})"})
             continue
         hr = centre_crop(image, crop)
-        rid, category = labels.get(name, ("", ""))
-        record: dict[str, Any] = {"id": rid or re.sub(r"[^A-Za-z0-9_.:-]", "_", Path(name).stem)[:64], "hr": hr, "lr": degrade(hr, quality=quality)}
+        rid, category = labels.get(rel, ("", ""))
+        record: dict[str, Any] = {"id": rid or re.sub(r"[^A-Za-z0-9_.:-]", "_", Path(rel).stem)[:64], "hr": hr, "lr": degrade(hr, quality=quality)}
         if category:
             record["category"] = category
         out.append(record)
+    if report is not None:
+        report.update({"images": len(images), "used": len(out), "labelled": len(labels), "skipped": skipped})
     return out
 
 
