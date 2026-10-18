@@ -66,3 +66,14 @@ the pre-registered grid: the selected config, or the frozen model when the keep-
   - a shift to new photographers and cameras: the fresh test shares no observer with the sample.
 
   It is read as such, not as one effect.
+
+## Dated note, 2026-10-18 (after the hosted run; the amendment above is unchanged)
+
+- Section 2, "Whether C2 fits a T4 at batch 8 is unproven": the hosted run of `e6a7fa2` / `eb13bd63` answered it. C2
+  completed at batch 8 with a peak of 11.94 GiB of CUDA memory (C0 6.32 GiB); the grid was complete, so the incomplete-
+  grid rule was not triggered.
+- Section 1, the reading rule, was applied to the fresh test in that run: vs frozen +0.89 dB (95 % CI 0.8168 to 0.967),
+  vs bicubic +0.5302 dB (0.4614 to 0.6042); both **improved** (CI lower bound > 0 and mean gain >= 0.10 dB).
+- Look counting: from commit `5a2bad7` the package names that run as the evaluation of record, so every later pass under
+  the pre-registered settings, the first pass of a new runtime included, is a "reproduction" written to
+  `_reproduction_<n>`.

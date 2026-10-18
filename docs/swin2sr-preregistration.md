@@ -127,3 +127,26 @@ pre-registration decides what replaces it; the grid is not edited after the fact
 ## Results
 
 (none yet: added only after the first hosted pre-registered run)
+
+### Dated note, 2026-10-18: results of the first hosted pre-registered run
+
+Added after the run, under "Results" as the status line above allows; nothing above this heading was changed, and the
+placeholder line above is kept as committed. The run is the evaluation of record: Colab CLI on a fresh Tesla T4,
+commit `e6a7fa2`, notebook blob `eb13bd63`, evidence in `docs/execution-evidence/2026-10-18-e6a7fa2/` and
+`docs/release-verification.md` (section *Hosted T4 evaluation of record (2026-10-18)*).
+
+- **Grid (validation PSNR, 48 pairs, epoch 5 kept by all three):** frozen 25.899; C0 26.784; C1 26.833 (+0.049 over
+  C0, < 0.10); C2 26.933 (+0.149 over C0, but < 0.10 over C1 on the unrounded scores, although the three-decimal
+  difference prints as 0.100). C2 fails the second clause of the selection rule, so **C0 is selected**; C0 beats the
+  frozen model by 0.885, so the adapted model is kept. The unrounded scores stayed on the released VM.
+- **Fresh test (144 crops, C0):** PSNR frozen 24.508, bicubic 24.868, selected 25.398 dB; vs frozen +0.89 dB
+  (95 % CI 0.8168 to 0.967, 144 wins / 0 losses), SSIM +0.02915; vs bicubic +0.5302 dB (0.4614 to 0.6042, 142 / 2),
+  SSIM +0.02013. Both verdicts **improved** under amendment 1. Every species gained 0.70 to 1.02 dB.
+- **Expected cost, measured** (the table above was an estimate): C0 369.6 s, C1 372.1 s (estimate ≈ 317 s), C2 439.7 s
+  (estimate ≈ 580 s, i.e. 1.19× C0 rather than 1.84×); Section 7 in all 1181.7 s; whole hosted session 1615.7 s
+  (26.9 min; estimate ≈ 32 min).
+- **C2 on a T4 at batch 8:** it fitted. Peak CUDA memory (`torch.cuda.max_memory_allocated`) C2 12,817,431,040 B
+  = 11.94 GiB against C0 6,783,353,856 B = 6.32 GiB (1.89×); no out-of-memory. The "unproven" sentence above is answered
+  by this note, not edited.
+- The package now carries this run as `RECORDED_SELECTION` / `RECORDED_EVALUATION` (commit `5a2bad7`), so a later run
+  with identical settings is labelled a reproduction of the pre-registered evaluation.
