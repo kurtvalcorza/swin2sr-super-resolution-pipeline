@@ -1,6 +1,6 @@
 # Pre-registered selection grid and fresh test (review R88-M1, R88-M4, R88-D2)
 
-Status: **pre-registered 2026-10-18, before any grid run and before the fresh test was scored on any hardware.**
+Status: **pre-registered 2026-10-18, after a reduced CPU timing and memory smoke of C0–C2 (48 / 16 pairs, 2 epochs; validation PSNR C0 26.943, C1 27.059, C2 27.042 — the 0.10 dB margin was set with these numbers in view) and before the full grid or any fresh-test score.** Wording corrected 2026-10-18 after the peer review (F2); `docs/swin2sr-preregistration-amendment-1.md` adds the fresh-test reading rule and the incomplete-grid rule.
 This file is committed on its own, ahead of the code that implements it. A later commit may add results under
 "Results". It must not change the grid, the rules, the fixed settings or the fresh-test pin above that heading; any
 change to them is a new pre-registration with its own date.

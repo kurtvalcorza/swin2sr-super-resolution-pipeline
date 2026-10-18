@@ -94,3 +94,59 @@ def bicubic_baseline(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
 def nearest_baseline(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     """The floor: the low-resolution input upscaled 2x by pixel replication."""
     return {**sr_metrics(_interpolate(records, Image.NEAREST), records), "baseline": "nearest-neighbour 2x interpolation of the LR input"}
+
+
+# Pre-registration amendment 1 (2026-10-18, docs/swin2sr-preregistration-amendment-1.md): how a test split is read.
+READ_SEED = 20261018
+READ_N_BOOT = 10_000
+READ_MARGIN_DB = 0.10
+
+
+def paired_bootstrap(
+    diffs: Sequence[float], strata: Sequence[Any], *, seed: int = READ_SEED, n_boot: int = READ_N_BOOT
+) -> tuple[float, float]:
+    """95 % percentile bootstrap interval of the mean paired difference, resampling with replacement within each
+    stratum (species) so the stratum counts are kept."""
+    d = np.asarray(diffs, dtype=float)
+    if d.size == 0:
+        raise ValueError("no paired differences")
+    labels = np.asarray(["" if s is None else str(s) for s in strata])
+    rng = np.random.default_rng(seed)
+    totals = np.zeros(n_boot)
+    for label in sorted(set(labels.tolist())):
+        values = d[labels == label]
+        totals += values[rng.integers(0, values.size, size=(n_boot, values.size))].sum(axis=1)
+    lo, hi = np.percentile(totals / d.size, [2.5, 97.5])
+    return float(lo), float(hi)
+
+
+def read_comparison(
+    selected: Mapping[str, Any], reference: Mapping[str, Any], *, margin: float = READ_MARGIN_DB,
+    seed: int = READ_SEED, n_boot: int = READ_N_BOOT,
+) -> dict[str, Any]:
+    """The amendment-1 reading rule for `selected` against `reference` (two `sr_metrics` results on the same crops):
+    paired per-crop PSNR and SSIM differences, species-stratified bootstrap 95 % intervals, and a verdict that is
+    'improved' only if the PSNR interval's lower bound is above 0 AND the mean gain is at least `margin` dB ('worse'
+    mirrors it; anything else is 'within tolerance'). SSIM is reported, not used for the verdict."""
+    ref = {r["id"]: r for r in reference.get("per_record", [])}
+    pairs = [(r, ref[r["id"]]) for r in selected.get("per_record", []) if r["id"] in ref]
+    finite = [(a, b) for a, b in pairs if np.isfinite(a["psnr"]) and np.isfinite(b["psnr"])]
+    rule = f"improved if the 95 % CI lower bound > 0 and the mean PSNR gain >= {margin:g} dB (bootstrap {n_boot}, seed {seed}, stratified by species)"
+    if not finite:
+        return {"n": 0, "dropped": len(pairs), "verdict": "not computed (no paired crops)", "rule": rule}
+    strata = [a.get("category") for a, _ in finite]
+    dp = [a["psnr"] - b["psnr"] for a, b in finite]
+    ds = [a["ssim"] - b["ssim"] for a, b in finite]
+    lo, hi = paired_bootstrap(dp, strata, seed=seed, n_boot=n_boot)
+    slo, shi = paired_bootstrap(ds, strata, seed=seed, n_boot=n_boot)
+    mean = float(np.mean(dp))
+    tol = 1e-9
+    verdict = "improved" if lo > 0 and mean >= margin - tol else ("worse" if hi < 0 and mean <= -margin + tol else "within tolerance")
+    return {
+        "n": len(finite),
+        "dropped": len(pairs) - len(finite),
+        "psnr": {"mean_diff": round(mean, 4), "ci95": [round(lo, 4), round(hi, 4)], "wins": int(sum(x > 0 for x in dp)), "losses": int(sum(x < 0 for x in dp))},
+        "ssim": {"mean_diff": round(float(np.mean(ds)), 5), "ci95": [round(slo, 5), round(shi, 5)]},
+        "verdict": verdict,
+        "rule": rule,
+    }

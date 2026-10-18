@@ -124,19 +124,23 @@ def test_model_state_check():
 
 
 def _scores(psnr: float) -> dict:
-    return {"psnr": psnr, "ssim": 0.8, "n": 4, "verdict": "measured-small-sample", "definitions": {}, "per_category": {"a": {"n": 4, "psnr": psnr, "ssim": 0.8}}, "per_record": []}
+    rows = [{"id": f"r{i}", "category": "ab"[i % 2], "psnr": psnr + 0.01 * (i % 3), "ssim": 0.8} for i in range(8)]
+    return {"psnr": psnr, "ssim": 0.8, "n": 8, "verdict": "measured-small-sample", "definitions": {}, "per_category": {"a": {"n": 4, "psnr": psnr, "ssim": 0.8}}, "per_record": rows}
 
 
 class _Pipe:
     def __init__(self, device: str, calls: list) -> None:
         self.device, self.calls, self.adapter, self.saved = device, calls, None, {}
+        self.fail_stages, self.gain = None, 0.2  # stand-in OOM for a config; validation gain per epoch
 
     def evaluate(self, records):
         self.calls.append(records[0]["split"])
         return _scores(26.0 if self.adapter is None else 27.0)
 
     def adapt(self, train, val, *, epochs, lr, batch_size, trainable_stages, seed=0, progress=None):
-        history = [{"epoch": e, "train_loss": None if e == 0 else 0.03, "val": {"psnr": 25.9 + 0.2 * e * (1 + trainable_stages / 10), "ssim": 0.8}} for e in range(epochs + 1)]
+        if trainable_stages == self.fail_stages:
+            raise MemoryError("stand-in CUDA out of memory")
+        history = [{"epoch": e, "train_loss": None if e == 0 else 0.03, "val": {"psnr": 25.9 + self.gain * e * (1 + trainable_stages / 10), "ssim": 0.8}} for e in range(epochs + 1)]
         self.adapter = {"trainable_stages": trainable_stages, "lr": float(lr), "epochs": epochs, "batch_size": batch_size, "seed": seed, "n_train": len(train), "n_val": len(val), "best_epoch": epochs, "n_trainable": 10 * trainable_stages, "n_total": 100, "selection": "highest validation PSNR", "loss": "L1", "started_from": "pinned base", "history": history}
         return dict(self.adapter)
 
@@ -171,7 +175,7 @@ def _namespace(tmp_path: Path, device: str = "cuda:0") -> dict:
         "fresh_test_records": [{"split": "fresh"}] * 144, "data_label": "sample", "SPLIT_SEED": 42, "data_source": "stand-in", "disjoint": {},
         "dataset_digest": lambda records: sm.SAMPLE_DIGEST, "dataset_manifests": {"fresh_test": {"digest": sm.FRESH_TEST_DIGEST}, "train": {"digest": "t"}},
         "nearest_baseline": lambda r: {**_scores(25.0), "baseline": "nearest"}, "bicubic_baseline": lambda r: {**_scores(26.3), "baseline": "bicubic"},
-        "run_history": [],
+        "run_history": [], "SECTION4_PASS": 1, "data_fingerprint": "fp-1", "hashlib": hashlib,
     })
     (tmp_path / "outputs").mkdir(exist_ok=True)
     return ns
@@ -300,3 +304,109 @@ def test_stamped_revision_contains_the_carried_modules(notebook):
     for rel, text in zip(generated["modules"], texts, strict=True):
         key = next(k for k in embedded if k.endswith(rel.split("/")[-1]))
         assert hashlib.sha256(text.encode("utf-8")).hexdigest() == embedded[key], rel
+
+
+# --- Round 2 (peer review F1, F3, F6) -------------------------------------------------------------------------
+
+
+def _s8(notebook: dict, ns: dict) -> None:
+    ns["calls"].clear()
+    exec(_cell(notebook, "adapted_test = pipe.evaluate(dev_test_records)"), ns)
+
+
+def test_f1_a_section_8_rerun_alone_is_a_reproduction_and_never_overwrites(notebook, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    ns = _namespace(tmp_path)
+    _run(notebook, ns)
+    main = tmp_path / "outputs" / f"{STEM}_evaluation_report.json"
+    first = main.read_bytes()
+    assert ns["test_look"] == "pre-registered evaluation (this runtime)"
+    _s8(notebook, ns)
+    assert ns["test_look"] == "reproduction" and ns["suffix"] == "_reproduction_1"
+    assert json.loads((tmp_path / "outputs" / f"{STEM}_evaluation_report_reproduction_1.json").read_text(encoding="utf-8"))["test_look"] == "reproduction"
+    assert main.read_bytes() == first
+    assert [h["test_look"] for h in ns["run_history"]] == ["pre-registered evaluation (this runtime)", "reproduction"]
+
+
+def test_f1_b_c2_oom_on_a_rerun_leaves_an_incomplete_grid_that_never_scores_the_fresh_test(notebook, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    ns = _namespace(tmp_path)
+    _run(notebook, ns)
+    ns["pipe"].fail_stages = 2
+    with pytest.raises(sm.RunStopped, match="Grid incomplete: C2 ran out of memory"):
+        exec(_cell(notebook, "RUN_GRID = 'auto'  # @param"), ns)
+    grid = json.loads((tmp_path / "outputs" / f"{STEM}_grid_selection_reproduction_1.json").read_text(encoding="utf-8"))
+    assert grid["complete"] is False and grid["status"]["C2"]["status"] == "out of memory"
+    assert grid["status"]["C0"]["status"] == grid["status"]["C1"]["status"] == "completed", "write-immediately keeps finished configs"
+    _s8(notebook, ns)
+    assert not ns["preregistered"] and ns["test_look"] == "not scored (exploratory)" and "fresh" not in ns["calls"]
+    assert ns["gate_problems"]
+
+
+def test_f1_c_c2_oom_in_a_fresh_runtime_stops_cleanly_and_section_8_is_exploratory(notebook, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    ns = _namespace(tmp_path)
+    ns["pipe"].fail_stages = 2
+    exec(_cell(notebook, "baseline_nearest = nearest_baseline("), ns)
+    with pytest.raises(sm.RunStopped, match="Grid incomplete"):
+        exec(_cell(notebook, "RUN_GRID = 'auto'  # @param"), ns)
+    _s8(notebook, ns)
+    assert ns["test_look"] == "not scored (exploratory)" and "fresh" not in ns["calls"]
+    assert (tmp_path / "outputs" / f"{STEM}_evaluation_report_exploratory_1.json").exists()
+
+
+def test_f1_d_section_4_rerun_with_another_split_then_section_8_is_exploratory(notebook, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    ns = _namespace(tmp_path)
+    ns["pipe"].gain = 0.001  # nothing beats the frozen model by 0.10 dB: the grid keeps the frozen model
+    _run(notebook, ns)
+    assert ns["selected_model"] == "frozen" and ns["preregistered"]
+    first = (tmp_path / "outputs" / f"{STEM}_evaluation_report.json").read_bytes()
+    # What Section 4 does on a re-run with SPLIT_SEED = 7: a new pass id, a new fingerprint, the base restored.
+    ns.update({"SECTION4_PASS": 2, "SPLIT_SEED": 7, "data_fingerprint": "fp-2"})
+    ns["pipe"].restore_base()
+    _s8(notebook, ns)
+    assert not ns["preregistered"] and "fresh" not in ns["calls"] and ns["test_look"] == "not scored (exploratory)"
+    assert any("latest Section 4" in g for g in ns["gate_problems"])
+    assert (tmp_path / "outputs" / f"{STEM}_evaluation_report.json").read_bytes() == first
+
+
+def test_f1_section_4_resets_the_grid_state(notebook):
+    s4 = _cell(notebook, "USE_BYOD = False  # @param")
+    assert "SECTION4_PASS = globals().get('SECTION4_PASS', 0) + 1" in s4 and "data_fingerprint = hashlib.sha256(" in s4
+    assert "'grid_completed'" in s4 and "globals().pop(_name, None)" in s4
+
+
+def test_f3_reading_rule_needs_a_ci_above_zero_and_a_tenth_of_a_db():
+    from swin2sr_super_resolution_pipeline import metrics as mt
+
+    def rows(values):
+        return {"per_record": [{"id": f"r{i}", "category": "ab"[i % 2], "psnr": v, "ssim": 0.8 + v / 1000} for i, v in enumerate(values)]}
+
+    base = rows([26.0 + 0.01 * (i % 5) for i in range(48)])
+    big = rows([26.3 + 0.01 * (i % 5) for i in range(48)])
+    tiny = rows([26.05 + 0.01 * (i % 5) for i in range(48)])
+    noisy = rows([26.0 + (1.0 if i % 2 else -0.8) for i in range(48)])
+    assert mt.read_comparison(big, base)["verdict"] == "improved"
+    assert mt.read_comparison(tiny, base)["verdict"] == "within tolerance", "a significant but < 0.10 dB gain is not 'improved'"
+    assert mt.read_comparison(base, big)["verdict"] == "worse"
+    r = mt.read_comparison(noisy, base)
+    assert r["psnr"]["ci95"][0] <= r["psnr"]["mean_diff"] <= r["psnr"]["ci95"][1] and "ssim" in r
+    assert mt.read_comparison(big, base) == mt.read_comparison(big, base), "seeded"
+    assert mt.READ_SEED == 20261018 and mt.READ_N_BOOT == 10_000 and mt.READ_MARGIN_DB == 0.10
+
+
+def test_f3_verdicts_use_the_reading_rule(notebook):
+    s8 = _cell(notebook, "adapted_test = pipe.evaluate(dev_test_records)")
+    assert "read_comparison(fresh_scores['selected'], fresh_scores['frozen'])" in s8 and "read_comparison(adapted_test, frozen_test)" in s8
+    assert "> 0 else" not in s8, "no zero-threshold verdicts remain"
+
+
+def test_frame_lists_replay_the_draw_record():
+    import gzip
+
+    frames = json.loads(gzip.decompress((ROOT / "docs" / "fresh-test-frames.json.gz").read_bytes()))["frames"]
+    draw = json.loads(DRAW.read_text(encoding="utf-8"))
+    for label, meta in draw["frame"].items():
+        ids = ",".join(str(r["obs"]) for r in frames[label])
+        assert hashlib.sha256(ids.encode()).hexdigest() == meta["sha256_of_ids"], label
