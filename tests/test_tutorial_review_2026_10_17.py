@@ -15,6 +15,7 @@ from pathlib import Path
 
 import pytest
 
+from swin2sr_super_resolution_pipeline import metrics as mt
 from swin2sr_super_resolution_pipeline import pipeline as pl
 from swin2sr_super_resolution_pipeline import samples as sm
 
@@ -158,6 +159,7 @@ class _Pipe:
 def _namespace(tmp_path: Path, device: str = "cuda:0") -> dict:
     ns = {k: getattr(pl, k) for k in dir(pl) if not k.startswith("__")}
     ns.update({k: getattr(sm, k) for k in dir(sm) if not k.startswith("__")})
+    ns.update({k: getattr(mt, k) for k in ("read_comparison", "paired_bootstrap")})
     calls: list = []
     pipe = _Pipe(device, calls)
 
@@ -378,8 +380,6 @@ def test_f1_section_4_resets_the_grid_state(notebook):
 
 
 def test_f3_reading_rule_needs_a_ci_above_zero_and_a_tenth_of_a_db():
-    from swin2sr_super_resolution_pipeline import metrics as mt
-
     def rows(values):
         return {"per_record": [{"id": f"r{i}", "category": "ab"[i % 2], "psnr": v, "ssim": 0.8 + v / 1000} for i, v in enumerate(values)]}
 
