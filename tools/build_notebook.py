@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate a STANDALONE DIMER tutorial notebook (NOTEBOOK_SPEC 2.2 §4) from repository sources — /2.2.
+"""Generate a STANDALONE DIMER tutorial notebook (NOTEBOOK_SPEC 2.5 §4) from repository sources — /2.3.
 
 /2 adds to /1: multi-module packages (one tagged cell per module, topologically ordered, package-relative
 imports removed), template-declared rewrite rules, and extra pinned snapshots (`extra_weights`) for packages
@@ -40,8 +40,25 @@ import sys
 from pathlib import Path
 from typing import Any
 
-GENERATOR_VERSION = "build_notebook.py/2.2"
-NOTEBOOK_SPEC = "2.2"
+GENERATOR_VERSION = "build_notebook.py/2.3"
+NOTEBOOK_SPEC = "2.5"
+NOTEBOOK_KINDS = ("TUTORIAL", "DEMO", "WORKSHOP", "CAPSTONE")  # NOTEBOOK_SPEC 2.5 §3.7 (KND1)
+# NOTEBOOK_SPEC 2.5 §3.6.5 (DOC17-DOC21): the canonical use notice, placed after the title and before the first code
+# cell. The BYOD sentence is kept because this generator's notebooks have a BYOD path.
+USE_NOTICE = (
+    "> **⚠️ Notice.** For research, training and evaluation only. Not validated for production,\n"
+    "> clinical, diagnostic or safety-critical use. Running this notebook downloads third-party\n"
+    "> model weights and datasets under their own licenses (see the model card) and uses compute\n"
+    "> on your own Colab or Kaggle account. Data you bring stays in your runtime, and you are\n"
+    "> responsible for having the right to use it. Results here are tutorial evidence, not\n"
+    "> benchmarks. Everything is provided \"as is\", without warranty of any kind. To the maximum\n"
+    "> extent permitted by law, the maintainers and the DIMER platform accept no liability for\n"
+    "> its use."
+)
+# /2.3 (swin2sr tutorial review 2026-10-17, R88-m1/m4/s2): spec 2.5 with `metadata.dimer.notebook_kind` and the use
+# notice; a carried module that differs from HEAD refuses to generate, so `generated_from.revision` always names a
+# commit that contains the carried code; a routed cell that raises an exception marked `dimer_stop` (a refused input,
+# an invalidated run) shows only its message, without the worker's traceback; `DIMER_ISOLATED_ENV` is documented.
 
 # ST2: default rewrite rule; a template may replace it with its own `rewrites` list. Every rule must
 # match exactly once across the embedded modules, so a silent no-op is impossible.
@@ -317,6 +334,9 @@ while True:
         _send.send(("done",))
     except BaseException as exc:
         signal.signal(signal.SIGINT, signal.SIG_IGN)
+        if getattr(exc, "dimer_stop", False):
+            _send.send(("stop", str(exc)))
+            continue
         frames = exc.__traceback__.tb_next if exc.__traceback__ is not None else None
         _send.send(("error", "".join(traceback.format_exception(type(exc), exc, frames)), f"{type(exc).__name__}: {exc}"))
 """
@@ -324,6 +344,14 @@ while True:
 
 class IsolatedCellError(RuntimeError):
     """A routed cell raised inside the isolated environment; its traceback is printed above."""
+
+
+class IsolatedCellStop(IsolatedCellError):
+    """A routed cell stopped on purpose (a refused input, or a run invalidated by an earlier refusal): IPython shows
+    only this message, with no traceback, and Run all / Run after stops here."""
+
+    def _render_traceback_(self):
+        return [str(self)]
 
 
 class IsolatedRuntime:
@@ -383,6 +411,8 @@ class IsolatedRuntime:
             elif kind == "error":
                 sys.stderr.write(message[1])
                 raise IsolatedCellError(message[2]) from None
+            elif kind == "stop":
+                raise IsolatedCellStop(message[1]) from None
             elif kind == "done":
                 return
 
@@ -458,6 +488,7 @@ def template_contract() -> dict[str, str]:
         "prerequisites": "list of markdown bullets; the generator appends the External access bullet",
         "cells": "list of {'md': str, 'code': str} stage cells inserted after the model cell; may use {stem}, {MODEL_ID}, {MODEL_REVISION}",
         "closing": "markdown for Interpretation and limits + References",
+        "notebook_kind": "OPTIONAL TUTORIAL | DEMO | WORKSHOP | CAPSTONE (default TUTORIAL; NOTEBOOK_SPEC 2.5 KND1)",
         "weights_key": "MODEL_KEY value (weights/<key>/dimer-base-manifest.json)",
         # optional:
         "modules": "OPTIONAL list of module files under src/<package>/ to embed (default ['pipeline.py']); dependency order is computed",
@@ -695,6 +726,21 @@ def _head_revision(repo: Path) -> str:
     return out or "uncommitted"
 
 
+def uncommitted_modules(repo: Path, ctx: dict[str, Any]) -> list[str]:
+    """Carried modules whose working-tree text differs from HEAD's (review R88-m1: the stamp once named a commit that
+    did not contain the carried code). Generation refuses while any is listed."""
+    out = []
+    for rel, module in zip(ctx["module_rels"], ctx["modules"], strict=True):
+        try:
+            committed = subprocess.check_output(["git", "-C", str(repo), "show", f"HEAD:{rel}"])
+        except (OSError, subprocess.CalledProcessError):
+            out.append(rel)
+            continue
+        if committed.decode("utf-8").replace("\r\n", "\n") != ctx["texts"][module].replace("\r\n", "\n"):
+            out.append(rel)
+    return out
+
+
 def recorded_revision(notebook_path: Path) -> str | None:
     """`generated_from.revision` of an existing notebook, or None."""
     if not notebook_path.exists():
@@ -830,6 +876,9 @@ def _declarations(template: dict[str, Any]) -> tuple[str, str, str]:
 def render(repo: Path, template: dict[str, Any], revision: str | None = None) -> dict[str, Any]:
     ctx = load_context(repo, template, revision)
     mode, run_all, byod = _declarations(template)
+    kind = template.get("notebook_kind", "TUTORIAL")
+    if kind not in NOTEBOOK_KINDS:
+        raise SystemExit(f"template notebook_kind {kind!r} is not one of {NOTEBOOK_KINDS}")
     stem = template["stem"]
     fmt = {"stem": stem, **{k: ctx[k] for k in ("MODEL_ID", "MODEL_REVISION", "MODEL_LICENSE", "MODEL_KEY")}}
     cells: list[dict[str, Any]] = []
@@ -848,7 +897,9 @@ def render(repo: Path, template: dict[str, Any], revision: str | None = None) ->
     )
     header = (
         f"# {template['title']}\n\n{badges}\n\n"
+        f"{USE_NOTICE}\n\n"
         f"**Profile:** `{template['profile']}`  \n"
+        f"**Kind:** `{kind}`  \n"
         f"**Mode:** `{mode}`  \n"
         f"**Notebook specification:** DIMER Notebook Specification {NOTEBOOK_SPEC} — **standalone** (§4)  \n"
         f"**Capability:** {template['capability']}\n\n"
@@ -928,7 +979,11 @@ def render(repo: Path, template: dict[str, Any], revision: str | None = None) ->
                 "`# dimer: kernel cell`), and it is safe to re-run: a complete environment built from this exact lock is reused "
                 "rather than rebuilt, and a live worker is kept with every variable created so far, so the cells after it keep "
                 "working. To start over, restart the session and choose **Run all**. `DIMER_NOTEBOOK_CI_PREINSTALLED=1` lets an "
-                "executor that has already installed exactly these pins run every cell in its own kernel instead."
+                "executor that has already installed exactly these pins run every cell in its own kernel instead. **Environment "
+                "variables this notebook reads** (EXE5; none selects data or a model): `DIMER_ISOLATED_ENV` names the folder of "
+                "the isolated environment (default `dimer_isolated_env_<lock digest>` in the working directory; set it only to "
+                "reuse an environment built elsewhere), and `DIMER_NOTEBOOK_CI_PREINSTALLED=1` is the executor switch above. The "
+                "router also sets `DIMER_KERNEL_IS_COLAB` for its worker; you never set it."
             )
         )
         add(_code(_isolated_install(ctx, template, pins_literal), {"cellView": "form", **({"jupyter": {"source_hidden": True}} if labels else {})}))
@@ -1063,6 +1118,7 @@ def render(repo: Path, template: dict[str, Any], revision: str | None = None) ->
         "metadata": {
             "dimer": {
                 "notebook_profile": template["profile"],
+                "notebook_kind": kind,
                 "notebook_mode": mode,
                 "notebook_spec": NOTEBOOK_SPEC,
                 "standalone": True,
@@ -1110,6 +1166,10 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         print(f"OK: {out} is up to date ({len(rendered)} bytes)")
         return 0
+    stale = uncommitted_modules(repo, load_context(repo, template, "HEAD"))
+    if stale:
+        print(f"REFUSED: {', '.join(stale)} differ from HEAD; commit the carried modules first so generated_from.revision contains them (ST5)", file=sys.stderr)
+        return 1
     rendered = to_bytes(render(repo, template))
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_bytes(rendered)
