@@ -4428,4 +4428,3 @@ def output_suffix(test_look: str, run_history: Sequence[Mapping[str, Any]]) -> s
         return f"_exploratory_{1 + sum(h['test_look'] == TEST_LOOKS[2] for h in run_history)}"
     earlier = sum(h["test_look"] != TEST_LOOKS[2] for h in run_history)
     return f"_reproduction_{earlier}" if earlier else ""
-
