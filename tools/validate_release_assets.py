@@ -36,12 +36,12 @@ BYOD_GATES = ("USE_BYOD",)
 EXPECTED_OUTPUTS = (
     "outputs/swin2sr_super_resolution_train.csv",
     "outputs/swin2sr_super_resolution_input_manifest.json",
-    "outputs/swin2sr_super_resolution_evaluation_report.json",
+    "outputs/swin2sr_super_resolution_evaluation_report{suffix}.json",
     "outputs/swin2sr_super_resolution_output_frozen.png",
-    "outputs/swin2sr_super_resolution_output_adapted.png",
-    "outputs/swin2sr_super_resolution_examples",
-    "outputs/swin2sr_super_resolution_adapter",
-    "outputs/swin2sr_super_resolution_result.json",
+    "outputs/swin2sr_super_resolution_output_selected{suffix}.png",
+    "outputs/swin2sr_super_resolution_examples{suffix}",
+    "outputs/swin2sr_super_resolution_adapter{suffix}",
+    "outputs/swin2sr_super_resolution_result{suffix}.json",
 )
 # Profile-specific code the notebook must exercise through the carried package's public API.
 CODE_MARKERS = (
@@ -63,20 +63,20 @@ CODE_MARKERS = (
     "result = pipeline.upscale(scene_input)",
     "'shape': array.shape == (scene_input.height * UPSCALE, scene_input.width * UPSCALE, 3)",
     "report = evaluation_report(result, scene_reference, low_resolution=scene_input, sample_kind=",
-    "baseline_nearest = nearest_baseline(test_records)",
-    "baseline_bicubic = bicubic_baseline(test_records)",
-    "frozen_test = pipe.evaluate(test_records)",
+    "baseline_nearest = nearest_baseline(dev_test_records)",
+    "baseline_bicubic = bicubic_baseline(dev_test_records)",
+    "frozen_test = pipe.evaluate(dev_test_records)",
     "frozen_verdict = {'above_nearest': bool(frozen_test['psnr'] > baseline_nearest['psnr']), 'above_bicubic': bool(frozen_test['psnr'] > baseline_bicubic['psnr'])}",
-    "adapt_result = pipe.adapt(train_records, val_records, epochs=EPOCHS, lr=LEARNING_RATE, batch_size=BATCH_SIZE, trainable_stages=TRAINABLE_STAGES, progress=report)",
-    "adapted_test = pipe.evaluate(test_records)",
+    "grid_selection = select_config(grid_results)",
+    "adapted_test = pipe.evaluate(dev_test_records)",
     "adapted_val = pipe.evaluate(val_records)",
     "adaptation_verdict = 'improved' if delta_psnr > 0 else ('no gain' if delta_psnr == 0 else 'worse')",
     "RUN_EXPERIMENT = False",
     "experiment_pipe = Swin2SRPipeline.from_pretrained(weights_dir=WEIGHTS_DIR, device=pipe.device)",
     "raise RuntimeError(f'the experiment changed a default export: {unchanged}')",
-    "adapted_scene_result, adapted_scene = upscale_scene(pipe, 'adapted')",
+    "adapted_scene_result, adapted_scene = upscale_scene(pipe, f'selected{suffix}')",
     "frozen_base = Swin2SRPipeline.from_pretrained(weights_dir=WEIGHTS_DIR, device=pipe.device)",
-    "pipe.save_artifact(artifact_dir, metadata={'tutorial': 'swin2sr_super_resolution', 'data_source': data_source})",
+    "pipe.save_artifact(artifact_dir, metadata={'tutorial': 'swin2sr_super_resolution', 'data_source': data_source, 'config': chosen_config, 'test_look': test_look})",
     "reloaded = Swin2SRPipeline.from_artifact(artifact_dir, weights_dir=WEIGHTS_DIR, device=pipe.device)",
     "assert parity['identical_images'] == parity['of']",
     "'model_revision': MODEL_REVISION",
@@ -107,12 +107,12 @@ MARKDOWN_MARKERS = (
     "scales other than 2×, blind restoration of unknown degradations",
     "## 4. iNaturalist photographs, paired crops and split",
     "## 5. Upscale a synthetic scene through the inference contract",
-    "## 6. Baselines and the frozen model on the test crops",
-    "## 7. Bounded fine-tuning of the last stage and the reconstruction tail",
-    "## 8. Held-out evaluation",
+    "## 6. Baselines and the frozen model on the exposed development test",
+    "## 7. Bounded fine-tuning and the pre-registered selection grid",
+    "## 8. The exposed development test and the fresh test",
     "## 9. Look at the reconstructions, export the adapter and reload it",
     "**Degradation:**",
-    "**Leakage:**",
+    "**Leakage and selection:**",
 )
 # Direct-library use that must stay inside the carried module cells (G2: the notebook calls the
 # pipeline API, it does not reimplement it). Checked on every code cell except the embedded ones
@@ -223,7 +223,7 @@ COMMON_MARKDOWN_MARKERS = (
     "without the repository being",
     "It does **not** establish benchmark superiority",
     "## References",
-    f"- Repository model card: https://github.com/kurtvalcorza/{REPO_NAME}/blob/main/MODEL_CARD.md",
+    f"Available: https://github.com/kurtvalcorza/{REPO_NAME}",
 )
 # Patterns that must never appear in tutorial code (comment-stripped), in any cell.
 FORBIDDEN_PATTERNS = (
