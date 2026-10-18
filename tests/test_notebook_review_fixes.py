@@ -205,29 +205,7 @@ def _scores(psnr, ssim=0.7):
     return {"psnr": psnr, "ssim": ssim, "n": 4, "verdict": "measured-small-sample", "definitions": {}, "per_category": {"a": {"n": 4, "psnr": psnr, "ssim": ssim}}, "per_record": []}
 
 
-def test_s2r_m3_negative_results_are_recorded_and_do_not_stop_the_notebook(notebook, tmp_path, monkeypatch):
-    """Sections 6 and 8 executed with stand-in scores: a frozen model below nearest-neighbour and an adapted model worse
-    than the frozen one complete, and the evaluation report records the verdicts (stand-in evidence, no model)."""
-    monkeypatch.chdir(tmp_path)
-    (tmp_path / "outputs").mkdir()
-    calls = []
-
-    def evaluate(records):
-        calls.append(1)
-        return _scores(20.0) if len(calls) == 1 else _scores(19.0)
-
-    ns = {
-        "pipe": types.SimpleNamespace(evaluate=evaluate), "test_records": [], "val_records": [], "time": __import__("time"), "json": json,
-        "nearest_baseline": lambda records: {**_scores(21.0), "baseline": "nearest"}, "bicubic_baseline": lambda records: {**_scores(22.0), "baseline": "bicubic"},
-        "MODEL_ID": "stand-in", "MODEL_REVISION": "0" * 40, "MODEL_KEY": "stand-in", "HR_CROP": 192, "UPSCALE": 2, "JPEG_QUALITY": 40,
-        "data_source": "stand-in", "dataset_manifests": {"test": {"digest": "d"}}, "disjoint": {}, "adapt_result": {"history": []}, "adapt_seconds": 0.0,
-    }
-    exec(_cell(notebook, "baseline_nearest = nearest_baseline("), ns)
-    assert ns["frozen_verdict"] == {"above_nearest": False, "above_bicubic": False}
-    exec(_cell(notebook, "adapted_test = pipe.evaluate("), ns)
-    report = json.loads((tmp_path / "outputs" / f"{STEM}_evaluation_report.json").read_text(encoding="utf-8"))
-    assert report["comparison"]["verdicts"]["adapted_vs_frozen_psnr"] == "worse"
-    assert report["comparison"]["verdicts"]["frozen_vs_baselines"] == {"above_nearest": False, "above_bicubic": False}
+# The Section 6/8 negative-result execution test moved to tests/test_tutorial_review_2026_10_17.py (stand-in grid run).
 
 
 # --- S2R-M4: guided layer and infrastructure labelling ----------------------------------------------------------
@@ -335,7 +313,7 @@ def test_s2r_m1_upload_outside_colab_cancelled_and_bad_path_are_explained(notebo
     monkeypatch.setitem(sys.modules, "google", None)
     with pytest.raises(RuntimeError, match="upload dialog exists only in Google Colab"):
         exec(_section_4(notebook, ""), _section_4_namespace([]))
-    with pytest.raises(FileNotFoundError, match="BYOD_PATH 'nowhere.zip' does not exist"):
+    with pytest.raises(sm.RunStopped, match="BYOD refused.*BYOD_PATH 'nowhere.zip' does not exist"):
         exec(_section_4(notebook, "nowhere.zip"), _section_4_namespace([]))
     for uploaded, message in (({}, "received 0"), ({"a.zip": b"", "b.zip": b""}, "received 2")):
         google, colab, files = (types.ModuleType(n) for n in ("google", "google.colab", "google.colab.files"))
@@ -343,5 +321,5 @@ def test_s2r_m1_upload_outside_colab_cancelled_and_bad_path_are_explained(notebo
         colab.files, google.colab = files, colab
         for name, module in (("google", google), ("google.colab", colab), ("google.colab.files", files)):
             monkeypatch.setitem(sys.modules, name, module)
-        with pytest.raises(ValueError, match=message):
+        with pytest.raises(sm.RunStopped, match=message):
             exec(_section_4(notebook, ""), _section_4_namespace([]))

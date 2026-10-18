@@ -1,0 +1,108 @@
+[colab] Parsing notebook '<local-run-dir>/swin2sr-super-resolution-pipeline-7ada094-1c233a/swin2sr_super_resolution_colab_7ada094_colab-cli-t4.ipynb'...
+[colab] Executing cell 1/13 - Infrastructure: build (or reuse) the isolated environment and route later cells to it...
+{'isolated_environment': '/content/dimer_isolated_env_f9a6f1c8416f', 'reused': False, 'isolated_python': '3.12.12', 'kernel_python': '3.13.15', 'locked_packages': 47, 'setup_seconds': 51}
+{'routed_to': '/content/dimer_isolated_env_f9a6f1c8416f/bin/python', 'worker_pid': 1432, 'worker_reused': False}
+[colab] Executing cell 2/13 - Infrastructure: record the runtime...
+{'notebook_source': {'repository': 'swin2sr-super-resolution-pipeline', 'repository_revision': '5a2bad7bd8a9205bedeee4bcad3bcd88cccecbbb', 'embedded_module': 'src/swin2sr_super_resolution_pipeline/pipeline.py', 'embedded_modules': ['src/swin2sr_super_resolution_pipeline/pipeline.py', 'src/swin2sr_super_resolution_pipeline/metrics.py', 'src/swin2sr_super_resolution_pipeline/samples.py'], 'module_sha256': '88c39c33f8bdbc59f800effe53f550844701d6f9832bd3c4900c76656290a56f', 'generator': 'build_notebook.py/2.3', 'notebook_spec': '2.5'}, 'python': '3.12.12', 'executable': '/content/dimer_isolated_env_f9a6f1c8416f/bin/python', 'torch': '2.14.0+cu130', 'transformers': '4.57.6', 'cuda': True}
+[colab] Executing cell 3/13 - swin2sr_super_resolution-08...
+[colab] Executing cell 4/13 - swin2sr_super_resolution-10...
+[colab] Executing cell 5/13 - swin2sr_super_resolution-12...
+[colab] Executing cell 6/13 - Infrastructure: stage and digest-verify the pinned snapshot, then load the model...
+{'model_id': 'caidas/swin2SR-classical-sr-x2-64', 'revision': 'cee1c923c6a37361c6e5650b65dcf4be821e5d52', 'license': 'apache-2.0', 'files': 4, 'total_bytes': 48462226}
+{'weights_dir': '/content/weights/swin2sr-x2-64', 'fetched': ['README.md', 'config.json', 'model.safetensors', 'preprocessor_config.json']}
+{'verified_files': 4, 'revision': 'cee1c923c6a37361c6e5650b65dcf4be821e5d52'}
+`self.pad_size` attribute is deprecated and will be removed in v5. Use `self.size_divisor` instead
+{'device': 'cuda:0', 'source': 'local-snapshot'}
+[colab] Executing cell 7/13 - swin2sr_super_resolution-16...
+{'fresh_test': {'n': 144, 'digest': '57a6730d6a3b9d3c...', 'disjoint_from_sample': {'fresh': 144, 'pinned': 360, 'observers_shared': 0, 'images_shared': 0}, 'scored': 'only in Section 8, only under the pre-registered settings'}}
+{'data_source': "iNaturalist CC0 bird photographs (six species): iNaturalist open data: research-grade observations whose photos carry the CC0 1.0 licence, one photo per observer per species, fetched from the open-data bucket by photo id (CC0 1.0 (each photo's licence as published by its observer on iNaturalist; attribution is kept per record))", 'raw_rows': {'photographs': 360, 'bytes': 39223447, 'observers': 222}, 'splits': {'train': 216, 'validation': 48, 'test': 96}, 'test_split_label': 'exposed development test', 'observer_overlap': {'observers': 222, 'in_more_than_one_split': 53}, 'degradation': {'hr_crop': 192, 'downsample': 'bicubic x2', 'jpeg_quality': 40}}
+{'train': {'n': 216, 'category_counts': {'american_goldfinch': 36, 'chipping_sparrow': 36, 'dark_eyed_junco': 36, 'house_finch': 36, 'song_sparrow': 36, 'white_throated_sparrow': 36}, 'hr_side': {'min': 192, 'max': 192}, 'digest': '7643d3e91cd27d46...'}}
+{'validation': {'n': 48, 'category_counts': {'american_goldfinch': 8, 'chipping_sparrow': 8, 'dark_eyed_junco': 8, 'house_finch': 8, 'song_sparrow': 8, 'white_throated_sparrow': 8}, 'hr_side': {'min': 192, 'max': 192}, 'digest': '77f75cedb1b9d04b...'}}
+{'test': {'n': 96, 'category_counts': {'american_goldfinch': 16, 'chipping_sparrow': 16, 'dark_eyed_junco': 16, 'house_finch': 16, 'song_sparrow': 16, 'white_throated_sparrow': 16}, 'hr_side': {'min': 192, 'max': 192}, 'digest': '6ebedd2b31e39045...'}}
+{'fresh_test': {'n': 144, 'category_counts': {'american_goldfinch': 24, 'chipping_sparrow': 24, 'dark_eyed_junco': 24, 'house_finch': 24, 'song_sparrow': 24, 'white_throated_sparrow': 24}, 'hr_side': {'min': 192, 'max': 192}, 'digest': '57a6730d6a3b9d3c...'}}
+{'example': {'id': 'house_finch-56', 'category': 'house_finch', 'hr': [192, 192], 'lr': [96, 96], 'observation': 'https://www.inaturalist.org/observations/12337763'}}
+{'probe': 'duplicate id', 'rejected': "duplicate id 'same'"}
+{'probe': 'input is not half its reference', 'rejected': 'records[0]: lr (192, 192) is not hr (192, 192) downscaled by 2'}
+{'probe': 'reference sides not multiples of 16', 'rejected': 'records[0]: hr sides must be multiples of 16 px, got (200, 200)'}
+{'probe': 'too small', 'rejected': '3 records; 8..5000 are required'}
+[colab] Executing cell 8/13 - swin2sr_super_resolution-19...
+{'ceilings': {'MIN_INPUT_SIDE': 8, 'MAX_INPUT_SIDE': 512, 'UPSCALE': 2, 'HR_CROP': 192, 'MIN_RECORDS': 8, 'MAX_RECORDS': 5000, 'device': 'cuda:0'}}
+{'scene': 'synthetic_shapes_64x48.png', 'sha256': {'input': 'f73fc0c90e455c03...', 'reference': '35897aa59a8e1128...'}, 'manifest_verdict': 'accepted', 'findings': 1}
+<isolated cell 7>:6: DeprecationWarning: 'mode' parameter is deprecated and will be removed in Pillow 13 (2026-10-15)
+  scene_reference = Image.fromarray(np.rint(np.stack([red, green, blue], axis=-1)).astype(np.uint8), mode='RGB')
+{'frozen': {'seconds': 0.594, 'checks': {'shape': True, 'dtype_uint8': True, 'output_size_reported': True, 'identity_reported': True}, 'psnr': {'psnr': 37.1}, 'bicubic_baseline': {'psnr': 29.73}, 'verdict': 'sample-sanity'}}
+<isolated cell 7>:38: DeprecationWarning: 'mode' parameter is deprecated and will be removed in Pillow 13 (2026-10-15)
+  Image.fromarray(array, mode='RGB').save(f'outputs/swin2sr_super_resolution_output_{label}.png')
+[colab] Executing cell 9/13 - swin2sr_super_resolution-22...
+{'nearest_baseline': {'psnr': 25.289, 'ssim': 0.764}, 'n': 96, 'note': 'nearest-neighbour 2x interpolation of the LR input'}
+{'bicubic_baseline': {'psnr': 26.314, 'ssim': 0.797}, 'note': 'bicubic 2x interpolation of the LR input'}
+{'frozen_model_exposed_development_test': {'psnr': 25.923, 'ssim': 0.785}, 'n': 96, 'verdict': 'measured', 'seconds': 22.9}
+{'definitions': {'psnr': 'mean peak signal-to-noise ratio in dB over the RGB channels of the reconstruction against the reference (255 peak); higher is better, unbounded', 'ssim': 'mean structural similarity on the luma channel (11-tap Gaussian window, sigma 1.5, 5-px border excluded); in -1..1, higher is better'}}
+{'by_species_frozen': {'american_goldfinch': {'n': 16, 'psnr': 26.73, 'ssim': 0.832}, 'chipping_sparrow': {'n': 16, 'psnr': 25.81, 'ssim': 0.764}, 'dark_eyed_junco': {'n': 16, 'psnr': 25.76, 'ssim': 0.766}, 'house_finch': {'n': 16, 'psnr': 26.17, 'ssim': 0.796}, 'song_sparrow': {'n': 16, 'psnr': 25.57, 'ssim': 0.781}, 'white_throated_sparrow': {'n': 16, 'psnr': 25.48, 'ssim': 0.77}}}
+{'frozen_vs_baselines': {'above_nearest': True, 'above_bicubic': False}}
+[colab] Executing cell 10/13 - swin2sr_super_resolution-25...
+{'run': 'pre-registered settings so far; Section 8 re-checks every setting, the grid and the model before it scores the fresh test', 'evaluation_of_record': {'label': 'pre-registered evaluation of record', 'date': '2026-10-18', 'executor': 'Colab CLI on a fresh T4 session', 'commit': 'e6a7fa2', 'blob': 'eb13bd63', 'evidence': 'docs/execution-evidence/2026-10-18-e6a7fa2/', 'config': 'C0', 'model': 'C0', 'fresh_test': {'n': 144, 'psnr': {'nearest': 23.83, 'bicubic': 24.868, 'frozen': 24.508, 'selected': 25.398}, 'ssim': {'nearest': 0.715, 'bicubic': 0.753, 'frozen': 0.744, 'selected': 0.773}, 'vs_frozen': {'psnr_mean_diff': 0.89, 'ci95': [0.8168, 0.967], 'wins': 144, 'losses': 0, 'ssim_mean_diff': 0.02915, 'verdict': 'improved'}, 'vs_bicubic': {'psnr_mean_diff': 0.5302, 'ci95': [0.4614, 0.6042], 'wins': 142, 'losses': 2, 'ssim_mean_diff': 0.02013, 'verdict': 'improved'}}}, 'see': 'docs/release-verification.md'}
+{'grid_config': 'C0', 'trainable_stages': 1, 'lr': 0.0001, 'epochs': 5, 'batch_size': 8}
+{'epoch': 0, 'train_loss': None, 'val_psnr': 25.899, 'val_ssim': 0.767, 'note': 'frozen model'}
+{'epoch': 1, 'train_loss': 0.03622, 'val_psnr': 26.4, 'val_ssim': 0.782}
+{'epoch': 2, 'train_loss': 0.035, 'val_psnr': 26.569, 'val_ssim': 0.788}
+{'epoch': 3, 'train_loss': 0.03434, 'val_psnr': 26.684, 'val_ssim': 0.79}
+{'epoch': 4, 'train_loss': 0.03392, 'val_psnr': 26.745, 'val_ssim': 0.793}
+{'epoch': 5, 'train_loss': 0.03368, 'val_psnr': 26.784, 'val_ssim': 0.795}
+{'grid_config': 'C1', 'trainable_stages': 1, 'lr': 0.0002, 'epochs': 5, 'batch_size': 8}
+{'epoch': 0, 'train_loss': None, 'val_psnr': 25.899, 'val_ssim': 0.767, 'note': 'frozen model'}
+{'epoch': 1, 'train_loss': 0.03579, 'val_psnr': 26.481, 'val_ssim': 0.785}
+{'epoch': 2, 'train_loss': 0.03448, 'val_psnr': 26.686, 'val_ssim': 0.791}
+{'epoch': 3, 'train_loss': 0.03387, 'val_psnr': 26.755, 'val_ssim': 0.794}
+{'epoch': 4, 'train_loss': 0.0336, 'val_psnr': 26.798, 'val_ssim': 0.795}
+{'epoch': 5, 'train_loss': 0.03336, 'val_psnr': 26.833, 'val_ssim': 0.798}
+{'grid_config': 'C2', 'trainable_stages': 2, 'lr': 0.0001, 'epochs': 5, 'batch_size': 8}
+{'epoch': 0, 'train_loss': None, 'val_psnr': 25.899, 'val_ssim': 0.767, 'note': 'frozen model'}
+{'epoch': 1, 'train_loss': 0.03592, 'val_psnr': 26.499, 'val_ssim': 0.784}
+{'epoch': 2, 'train_loss': 0.03433, 'val_psnr': 26.737, 'val_ssim': 0.793}
+{'epoch': 3, 'train_loss': 0.03359, 'val_psnr': 26.82, 'val_ssim': 0.797}
+{'epoch': 4, 'train_loss': 0.03324, 'val_psnr': 26.873, 'val_ssim': 0.798}
+{'epoch': 5, 'train_loss': 0.03295, 'val_psnr': 26.933, 'val_ssim': 0.8}
+config stages      lr     ep0     ep1     ep2     ep3     ep4     ep5 best best_val_psnr  seconds
+    C0      1  0.0001  25.899  26.400  26.569  26.684  26.745  26.784    5        26.784    331.4
+    C1      1  0.0002  25.899  26.481  26.686  26.755  26.798  26.833    5        26.833    330.3
+    C2      2  0.0001  25.899  26.499  26.737  26.820  26.873  26.933    5        26.933    389.8
+{'chosen': 'C0', 'model': 'C0', 'reason': 'C0 (26.784 dB) is kept, as no challenger clears its rule: C1 is +0.049 dB over C0 (< 0.10); C2 (2 stages) is +0.149 dB over C0 (>= 0.10) and +0.099 dB over the better one-stage config C1 (< 0.10), so the more-stages rule fails', 'margins_db': {'C1': {'vs_C0': 0.049240064}, 'C2': {'vs_C0': 0.148584086, 'vs_C1': 0.099344021}}, 'selection_split': 'validation (48 pairs; no test crop plays a part)', 'max_memory_allocated': {'C0': 6783353856, 'C1': 6783229440, 'C2': 12817431040}}
+{'config': 'C0', 'model': 'C0', 'trainable_parameters': 2463011, 'total_parameters': 12091571, 'best_epoch': 5, 'selection': 'highest validation PSNR', 'loss': 'L1 between the reconstruction and the high-resolution reference (0..1 scale)', 'started_from': 'pinned base', 'seconds': 1051.8}
+[colab] Executing cell 11/13 - swin2sr_super_resolution-28...
+{'fresh_test_gate': 'open', 'test_look': 'reproduction', 'outputs_suffix': '_reproduction_1'}
+{'psnr': {'nearest': 25.289, 'bicubic': 26.314, 'frozen': 25.923, 'selected': 26.914}}
+{'ssim': {'nearest': 0.764, 'bicubic': 0.797, 'frozen': 0.785, 'selected': 0.816}}
+{'split': 'exposed development test'}
+{'delta_vs_frozen': {'psnr': 0.991, 'ssim': 0.032}}
+{'delta_vs_bicubic': {'psnr': 0.6, 'ssim': 0.019}}
+{'by_species': {'american_goldfinch': {'n': 16, 'frozen_psnr': 26.73, 'selected_psnr': 27.87, 'frozen_ssim': 0.832, 'selected_ssim': 0.871}, 'chipping_sparrow': {'n': 16, 'frozen_psnr': 25.81, 'selected_psnr': 26.61, 'frozen_ssim': 0.764, 'selected_ssim': 0.788}, 'dark_eyed_junco': {'n': 16, 'frozen_psnr': 25.76, 'selected_psnr': 26.97, 'frozen_ssim': 0.766, 'selected_ssim': 0.801}, 'house_finch': {'n': 16, 'frozen_psnr': 26.17, 'selected_psnr': 27.35, 'frozen_ssim': 0.796, 'selected_ssim': 0.827}, 'song_sparrow': {'n': 16, 'frozen_psnr': 25.57, 'selected_psnr': 26.36, 'frozen_ssim': 0.781, 'selected_ssim': 0.811}, 'white_throated_sparrow': {'n': 16, 'frozen_psnr': 25.48, 'selected_psnr': 26.31, 'frozen_ssim': 0.77, 'selected_ssim': 0.8}}}
+{'reading': {'vs_frozen': {'n': 96, 'dropped': 0, 'psnr': {'mean_diff': 0.9907, 'ci95': [0.8824, 1.105], 'wins': 96, 'losses': 0}, 'ssim': {'mean_diff': 0.03151, 'ci95': [0.02716, 0.03579]}, 'verdict': 'improved', 'rule': 'improved if the 95 % CI lower bound > 0 and the mean PSNR gain >= 0.1 dB (bootstrap 10000, seed 20261018, stratified by species)'}, 'vs_bicubic': {'n': 96, 'dropped': 0, 'psnr': {'mean_diff': 0.5998, 'ci95': [0.5109, 0.6916], 'wins': 95, 'losses': 1}, 'ssim': {'mean_diff': 0.01887, 'ci95': [0.01591, 0.02189]}, 'verdict': 'improved', 'rule': 'improved if the 95 % CI lower bound > 0 and the mean PSNR gain >= 0.1 dB (bootstrap 10000, seed 20261018, stratified by species)'}}}
+{'verdicts': {'frozen_vs_baselines': {'above_nearest': True, 'above_bicubic': False}, 'adapted_vs_frozen_psnr': 'improved', 'adapted_vs_bicubic_psnr': 'improved'}}
+`self.pad_size` attribute is deprecated and will be removed in v5. Use `self.size_divisor` instead
+{'fresh_test psnr': {'nearest': 23.83, 'bicubic': 24.868, 'frozen': 24.508, 'selected': 25.398}}
+{'fresh_test ssim': {'nearest': 0.715, 'bicubic': 0.753, 'frozen': 0.744, 'selected': 0.773}}
+{'fresh_test n': 144}
+{'fresh_test delta_vs_frozen': {'psnr': 0.89, 'ssim': 0.029}}
+{'fresh_test delta_vs_bicubic': {'psnr': 0.53, 'ssim': 0.02}}
+{'fresh_test by_species': {'american_goldfinch': {'n': 24, 'frozen_psnr': 26.0, 'selected_psnr': 26.94, 'frozen_ssim': 0.771, 'selected_ssim': 0.801}, 'chipping_sparrow': {'n': 24, 'frozen_psnr': 24.47, 'selected_psnr': 25.3, 'frozen_ssim': 0.749, 'selected_ssim': 0.774}, 'dark_eyed_junco': {'n': 24, 'frozen_psnr': 24.67, 'selected_psnr': 25.64, 'frozen_ssim': 0.718, 'selected_ssim': 0.749}, 'house_finch': {'n': 24, 'frozen_psnr': 24.64, 'selected_psnr': 25.66, 'frozen_ssim': 0.763, 'selected_ssim': 0.8}, 'song_sparrow': {'n': 24, 'frozen_psnr': 24.69, 'selected_psnr': 25.59, 'frozen_ssim': 0.772, 'selected_ssim': 0.802}, 'white_throated_sparrow': {'n': 24, 'frozen_psnr': 22.57, 'selected_psnr': 23.27, 'frozen_ssim': 0.69, 'selected_ssim': 0.711}}}
+{'fresh_test reading': {'vs_frozen': {'n': 144, 'dropped': 0, 'psnr': {'mean_diff': 0.89, 'ci95': [0.8168, 0.967], 'wins': 144, 'losses': 0}, 'ssim': {'mean_diff': 0.02915, 'ci95': [0.02543, 0.03303]}, 'verdict': 'improved', 'rule': 'improved if the 95 % CI lower bound > 0 and the mean PSNR gain >= 0.1 dB (bootstrap 10000, seed 20261018, stratified by species)'}, 'vs_bicubic': {'n': 144, 'dropped': 0, 'psnr': {'mean_diff': 0.5302, 'ci95': [0.4614, 0.6042], 'wins': 142, 'losses': 2}, 'ssim': {'mean_diff': 0.02013, 'ci95': [0.01731, 0.02313]}, 'verdict': 'improved', 'rule': 'improved if the 95 % CI lower bound > 0 and the mean PSNR gain >= 0.1 dB (bootstrap 10000, seed 20261018, stratified by species)'}}}
+{'fresh_test verdicts': {'selected_vs_frozen_psnr': 'improved', 'selected_vs_bicubic_psnr': 'improved'}}
+run   data config  model  grid dev_psnr fresh_psnr  test_look
+  1 sample     C0     C0  True   26.914     25.398  reproduction
+{'report': 'outputs/swin2sr_super_resolution_evaluation_report_reproduction_1.json', 'test_look': 'reproduction', 'verdicts': {'frozen_vs_baselines': {'above_nearest': True, 'above_bicubic': False}, 'adapted_vs_frozen_psnr': 'improved', 'adapted_vs_bicubic_psnr': 'improved'}}
+[colab] Executing cell 12/13 - swin2sr_super_resolution-31...
+{'selected_reproduction_1': {'seconds': 0.116, 'checks': {'shape': True, 'dtype_uint8': True, 'output_size_reported': True, 'identity_reported': True}, 'psnr': {'psnr': 33.47}, 'bicubic_baseline': {'psnr': 29.73}, 'verdict': 'sample-sanity'}}
+<isolated cell 11>:13: DeprecationWarning: 'mode' parameter is deprecated and will be removed in Pillow 13 (2026-10-15)
+  Image.fromarray(frozen_base.upscale(record['lr'])['image'], mode='RGB'),
+<isolated cell 11>:14: DeprecationWarning: 'mode' parameter is deprecated and will be removed in Pillow 13 (2026-10-15)
+  Image.fromarray(pipe.upscale(record['lr'])['image'], mode='RGB'),
+{'examples': ['chipping_sparrow-10.png', 'chipping_sparrow-22.png', 'song_sparrow-56.png', 'white_throated_sparrow-20.png'], 'crops': 'validation', 'panel_order': ['input x2 nearest', 'bicubic', 'frozen', 'selected', 'reference']}
+{'artifact': 'outputs/swin2sr_super_resolution_adapter_reproduction_1', 'format': 'org.valcorza.swin2sr-x2-64.adapter.v1', 'tensors': 126, 'bytes': 9868140, 'sha256': 'e96f1c2b8d470716...'}
+`self.pad_size` attribute is deprecated and will be removed in v5. Use `self.size_divisor` instead
+{'reload_parity': {'identical_images': 8, 'of': 8, 'max_abs_difference': 0, 'crops': 'validation'}, 'reloaded_best_epoch': 5}
+{'result': 'outputs/swin2sr_super_resolution_result_reproduction_1.json', 'test_look': 'reproduction'}
+['swin2sr_super_resolution_adapter_reproduction_1', 'swin2sr_super_resolution_evaluation_report_reproduction_1.json', 'swin2sr_super_resolution_examples_reproduction_1', 'swin2sr_super_resolution_grid_selection_reproduction_1.json', 'swin2sr_super_resolution_input_manifest.json', 'swin2sr_super_resolution_output_frozen.png', 'swin2sr_super_resolution_output_selected_reproduction_1.png', 'swin2sr_super_resolution_result_reproduction_1.json', 'swin2sr_super_resolution_train.csv']
+[colab] Executing cell 13/13 - swin2sr_super_resolution-34...
+{'experiment': 'skipped (RUN_EXPERIMENT = False); the default path above is complete'}
+[colab] Saving notebook with outputs to '<local-run-dir>/swin2sr-super-resolution-pipeline-7ada094-1c233a/swin2sr_super_resolution_colab_7ada094_colab-cli-t4_output.ipynb'...
