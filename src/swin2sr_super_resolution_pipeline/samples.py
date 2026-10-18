@@ -4286,9 +4286,38 @@ GRID_BATCH_SIZE = 8
 ADAPT_SEED = 0
 TEST_LOOKS = ("pre-registered evaluation (this runtime)", "reproduction", "not scored (exploratory)")
 # The grid choice and the evaluation of record from the FIRST hosted run under the pre-registered settings
-# (docs/release-verification.md). None until that run is recorded: a CPU run (grid off) then uses C0 and says so.
-RECORDED_SELECTION: dict[str, Any] | None = None
-RECORDED_EVALUATION: dict[str, Any] | None = None
+# (docs/release-verification.md, "Hosted T4 evaluation of record (2026-10-18)"; executed notebook and log in
+# docs/execution-evidence/2026-10-18-e6a7fa2/). A CPU run (grid off) uses this choice and says so; any later pass under
+# the pre-registered settings is a reproduction of this evaluation and writes `_reproduction_<n>` files.
+RECORDED_SELECTION: dict[str, Any] | None = {
+    "chosen": "C0",
+    "model": "C0",
+    "best_val_psnr": {"C0": 26.784, "C1": 26.833, "C2": 26.933},
+    "frozen_val_psnr": 25.899,
+    "max_memory_allocated": {"C0": 6783353856, "C1": 6783229440, "C2": 12817431040},
+    "reason": "C1 +0.049 dB over C0 (< 0.10); C2 +0.149 dB over C0 but < 0.10 dB over C1 on unrounded scores (0.100 at 3 decimals), so the two-stage rule fails; C0 is kept",
+    "date": "2026-10-18",
+    "commit": "e6a7fa2",
+    "blob": "eb13bd63",
+    "evidence": "docs/execution-evidence/2026-10-18-e6a7fa2/",
+}
+RECORDED_EVALUATION: dict[str, Any] | None = {
+    "label": "pre-registered evaluation of record",
+    "date": "2026-10-18",
+    "executor": "Colab CLI on a fresh T4 session",
+    "commit": "e6a7fa2",
+    "blob": "eb13bd63",
+    "evidence": "docs/execution-evidence/2026-10-18-e6a7fa2/",
+    "config": "C0",
+    "model": "C0",
+    "fresh_test": {
+        "n": 144,
+        "psnr": {"nearest": 23.83, "bicubic": 24.868, "frozen": 24.508, "selected": 25.398},
+        "ssim": {"nearest": 0.715, "bicubic": 0.753, "frozen": 0.744, "selected": 0.773},
+        "vs_frozen": {"psnr_mean_diff": 0.89, "ci95": [0.8168, 0.967], "wins": 144, "losses": 0, "ssim_mean_diff": 0.02915, "verdict": "improved"},
+        "vs_bicubic": {"psnr_mean_diff": 0.5302, "ci95": [0.4614, 0.6042], "wins": 142, "losses": 2, "ssim_mean_diff": 0.02013, "verdict": "improved"},
+    },
+}
 # Score-once rule item 1: the fresh test is scored only when EVERY setting below holds (the grid supplies the config).
 PREREGISTERED_SETTINGS: dict[str, Any] = {
     "data": "sample",
@@ -4333,6 +4362,17 @@ def preregistration_differences(settings: Mapping[str, Any]) -> list[str]:
     return out
 
 
+def _margin_text(diff: float, margin: float, *, tol: float = 1e-9) -> str:
+    """`diff` in dB with as many decimals as it takes for the printed value to fall on the same side of `margin` as the
+    unrounded one (3 when that is enough): a 0.0996 dB margin never prints as 0.100."""
+    passes = diff >= margin - tol
+    for digits in range(3, 10):
+        text = f"{diff:+.{digits}f}"
+        if (float(text) >= margin - tol) == passes:
+            return text
+    return f"{diff:+.9f}"
+
+
 def select_config(
     results: Mapping[str, Mapping[str, Any]], *, default: str = GRID_DEFAULT, margin: float = GRID_MARGIN_DB
 ) -> dict[str, Any]:
@@ -4367,13 +4407,32 @@ def select_config(
         chosen = max(bigger, key=lambda name: scores[name])
     frozen = float(results[chosen]["history"][0]["val"]["psnr"])
     keep_frozen = scores[chosen] - frozen < margin - tol
-    reason = (
-        f"{chosen} ({scores[chosen]:.3f} dB) beats {default} ({scores[default]:.3f} dB) by at least {margin:g} dB"
+    best_one_name = max(one, key=lambda name: scores[name])
+    threshold = f"{margin:.2f}"
+    margins: dict[str, dict[str, float]] = {}
+    clauses = []
+    for name in results:
+        if name == default:
+            continue
+        over_default = scores[name] - scores[default]
+        margins[name] = {f"vs_{default}": round(over_default, 9)}
+        first = f"{_margin_text(over_default, margin)} dB over {default} ({'>=' if over_default >= margin - tol else '<'} {threshold})"
+        if stages[name] == base_stages:
+            clauses.append(f"{name} is {first}")
+            continue
+        over_best = scores[name] - best_one
+        margins[name][f"vs_{best_one_name}"] = round(over_best, 9)
+        second = f"{_margin_text(over_best, margin)} dB over the better one-stage config {best_one_name} ({'>=' if over_best >= margin - tol else '<'} {threshold})"
+        verdict = "both clauses hold" if name in bigger else "so the more-stages rule fails"
+        clauses.append(f"{name} ({stages[name]} stages) is {first} and {second}, {verdict}")
+    head = (
+        f"{chosen} ({scores[chosen]:.3f} dB) is selected"
         if chosen != default
-        else f"no challenger beats {default} ({scores[default]:.3f} dB) by at least {margin:g} dB; {default} is kept"
+        else f"{default} ({scores[default]:.3f} dB) is kept, as no challenger clears its rule"
     )
+    reason = head + (": " + "; ".join(clauses) if clauses else "")
     if keep_frozen:
-        reason += f"; but it does not beat the frozen model ({frozen:.3f} dB) by {margin:g} dB, so the frozen model is kept"
+        reason += f"; but it does not beat the frozen model ({frozen:.3f} dB) by {threshold} dB, so the frozen model is kept"
     return {
         "configs": {
             name: {**{k: results[name].get(k) for k in ("trainable_stages", "lr", "best_epoch", "n_trainable")}, "best_val_psnr": round(scores[name], 3)}
@@ -4386,6 +4445,7 @@ def select_config(
         "chosen": chosen,
         "model": "frozen" if keep_frozen else chosen,
         "reason": reason,
+        "margins_db": margins,
         "selection_split": "validation (48 pairs; no test crop plays a part)",
     }
 
@@ -4422,9 +4482,11 @@ test_look_for.__test__ = False  # a library helper, not a pytest test
 
 
 def output_suffix(test_look: str, run_history: Sequence[Mapping[str, Any]]) -> str:
-    """'' for the first scored pass of a runtime; `_reproduction_<n>` / `_exploratory_<n>` otherwise, so neither
-    ever overwrites the pre-registered exports."""
+    """'' for the pre-registered evaluation; `_reproduction_<n>` / `_exploratory_<n>` otherwise (a reproduction of
+    RECORDED_EVALUATION included), so neither ever overwrites the pre-registered exports."""
     if test_look == TEST_LOOKS[2]:
         return f"_exploratory_{1 + sum(h['test_look'] == TEST_LOOKS[2] for h in run_history)}"
-    earlier = sum(h["test_look"] != TEST_LOOKS[2] for h in run_history)
-    return f"_reproduction_{earlier}" if earlier else ""
+    if test_look == TEST_LOOKS[1]:
+        # numbered from 1 whether the reproduction follows this runtime's own first pass or RECORDED_EVALUATION
+        return f"_reproduction_{1 + sum(h['test_look'] == TEST_LOOKS[1] for h in run_history)}"
+    return ""

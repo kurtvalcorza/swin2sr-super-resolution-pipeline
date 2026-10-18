@@ -109,7 +109,8 @@ def test_preregistration_names_every_fixed_setting():
     assert {"data", "sample_digest", "split_seed", "split_per_species", "fresh_test_digest", "hr_crop", "jpeg_quality", "model_revision", "epochs", "batch_size", "adapt_seed", "grid", "grid_configs", "grid_margin_db", "selection_metric"} <= keys
     assert sm.PREREGISTERED_SETTINGS["grid_configs"] == {"C0": {"trainable_stages": 1, "lr": 1e-4}, "C1": {"trainable_stages": 1, "lr": 2e-4}, "C2": {"trainable_stages": 2, "lr": 1e-4}}
     assert sm.preregistration_differences(dict(sm.PREREGISTERED_SETTINGS)) == []
-    assert sm.RECORDED_EVALUATION is None and sm.RECORDED_SELECTION is None, "set only from the first hosted pre-registered run"
+    assert sm.RECORDED_SELECTION["chosen"] == sm.RECORDED_SELECTION["model"] == sm.RECORDED_EVALUATION["config"] == "C0"
+    assert sm.RECORDED_EVALUATION["commit"] == sm.RECORDED_SELECTION["commit"] == "e6a7fa2", "the first hosted pre-registered run"
 
 
 def test_model_state_check():
@@ -156,9 +157,13 @@ class _Pipe:
         return []
 
 
-def _namespace(tmp_path: Path, device: str = "cuda:0") -> dict:
+def _namespace(tmp_path: Path, device: str = "cuda:0", *, recorded: bool = False) -> dict:
+    """recorded=False replays a build that carries no evaluation of record (how the pre-registered evaluation itself
+    ran); recorded=True is the shipped package, whose RECORDED_* name the 2026-10-18 hosted run."""
     ns = {k: getattr(pl, k) for k in dir(pl) if not k.startswith("__")}
     ns.update({k: getattr(sm, k) for k in dir(sm) if not k.startswith("__")})
+    if not recorded:
+        ns.update({"RECORDED_SELECTION": None, "RECORDED_EVALUATION": None})
     ns.update({k: getattr(mt, k) for k in ("read_comparison", "paired_bootstrap")})
     calls: list = []
     pipe = _Pipe(device, calls)
@@ -273,7 +278,7 @@ def test_prose_no_longer_claims_test_selection_or_a_sweep(notebook):
     for banned in ("smallest configuration that beat bicubic", "the held-out test, not the validation curve, decides", "never used for training or", "build sweep", "did not beat the default", "counter-examples", "Kaggle T4 run of 20 September", "about ten minutes", "scored once"):
         assert banned not in text, banned
     md = _markdown(notebook)
-    assert "exposed development test" in md and "Flickr2K" in md and "DIV2K" in md and "913.5 s" in md
+    assert "exposed development test" in md and "Flickr2K" in md and "DIV2K" in md and "1615.7 s" in md and "913.5 s" not in md
 
 
 def test_spec_2_5_metadata_and_use_notice(notebook):
@@ -410,3 +415,100 @@ def test_frame_lists_replay_the_draw_record():
     for label, meta in draw["frame"].items():
         ids = ",".join(str(r["obs"]) for r in frames[label])
         assert hashlib.sha256(ids.encode()).hexdigest() == meta["sha256_of_ids"], label
+
+
+# --- Requote 2026-10-18: the hosted T4 evaluation of record is carried in the package ------------------------
+
+EVIDENCE = ROOT / "docs" / "execution-evidence" / "2026-10-18-e6a7fa2" / "swin2sr_super_resolution_colab_e6a7fa2_colab-cli-t4_output.ipynb"
+
+
+def _evidence_lines() -> list[str]:
+    import ast
+
+    executed = json.loads(EVIDENCE.read_text(encoding="utf-8"))
+    lines = []
+    for cell in executed["cells"]:
+        for out in cell.get("outputs", []):
+            text = out.get("text", "")
+            lines += ("".join(text) if isinstance(text, list) else text).splitlines()
+    return [ast.literal_eval(line) for line in lines if line.startswith("{'") and line.endswith("}")]
+
+
+def test_recorded_selection_and_evaluation_equal_the_executed_evidence():
+    printed = {key: value for line in _evidence_lines() for key, value in line.items()}
+    assert printed["test_look"] == "pre-registered evaluation (this runtime)" and printed["fresh_test_gate"] == "open"
+    assert printed["chosen"] == printed["model"] == sm.RECORDED_SELECTION["chosen"] == sm.RECORDED_EVALUATION["model"]
+    assert printed["max_memory_allocated"] == sm.RECORDED_SELECTION["max_memory_allocated"]
+    fresh = sm.RECORDED_EVALUATION["fresh_test"]
+    assert printed["fresh_test n"] == fresh["n"] == 144
+    assert printed["fresh_test psnr"] == fresh["psnr"] and printed["fresh_test ssim"] == fresh["ssim"]
+    reading = printed["fresh_test reading"]
+    for side in ("vs_frozen", "vs_bicubic"):
+        psnr = reading[side]["psnr"]
+        assert (psnr["mean_diff"], psnr["ci95"], psnr["wins"], psnr["losses"]) == tuple(fresh[side][k] for k in ("psnr_mean_diff", "ci95", "wins", "losses"))
+        assert reading[side]["ssim"]["mean_diff"] == fresh[side]["ssim_mean_diff"] and reading[side]["verdict"] == fresh[side]["verdict"] == "improved"
+    table = EVIDENCE.read_text(encoding="utf-8")
+    for name, score in sm.RECORDED_SELECTION["best_val_psnr"].items():
+        assert f"{score:.3f}" in table, name
+
+
+def test_with_the_record_an_identical_run_is_a_reproduction_and_never_writes_the_main_files(notebook, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    ns = _namespace(tmp_path, recorded=True)
+    assert ns["RECORDED_EVALUATION"] is sm.RECORDED_EVALUATION is not None
+    _run(notebook, ns)
+    assert ns["preregistered"] and "fresh" in ns["calls"], "a reproduction scores the fresh test under the same settings"
+    assert ns["test_look"] == "reproduction" and ns["suffix"] == "_reproduction_1"
+    outputs = tmp_path / "outputs"
+    first = json.loads((outputs / f"{STEM}_evaluation_report_reproduction_1.json").read_text(encoding="utf-8"))
+    assert first["test_look"] == "reproduction" and first["settings_differing"] == []
+    assert (outputs / f"{STEM}_grid_selection_reproduction_1.json").exists()
+    assert not (outputs / f"{STEM}_evaluation_report.json").exists(), "the main files belong to the evaluation of record"
+    assert not (outputs / f"{STEM}_grid_selection.json").exists()
+    _run(notebook, ns)
+    assert ns["test_look"] == "reproduction" and ns["suffix"] == "_reproduction_2"
+    assert json.loads((outputs / f"{STEM}_evaluation_report_reproduction_1.json").read_text(encoding="utf-8")) == first, "never overwritten"
+    assert [h["test_look"] for h in ns["run_history"]] == ["reproduction", "reproduction"]
+    assert all("this runtime" not in h["test_look"] for h in ns["run_history"])
+
+
+def test_with_the_record_a_changed_setting_is_still_exploratory(notebook, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    ns = _namespace(tmp_path, recorded=True)
+    _run(notebook, ns, EPOCHS=4)
+    assert not ns["preregistered"] and ns["test_look"] == "not scored (exploratory)" and "fresh" not in ns["calls"]
+    assert ns["suffix"] == "_exploratory_1"
+
+
+def test_labels_and_suffixes_with_and_without_the_record():
+    rec = sm.RECORDED_EVALUATION
+    assert sm.test_look_for(True, earlier_scored=0, recorded=None) == "pre-registered evaluation (this runtime)"
+    assert sm.test_look_for(True, earlier_scored=0, recorded=rec) == "reproduction"
+    assert sm.test_look_for(False, earlier_scored=0, recorded=rec) == "not scored (exploratory)"
+    assert sm.output_suffix("pre-registered evaluation (this runtime)", []) == ""
+    assert sm.output_suffix("reproduction", []) == "_reproduction_1"
+    assert sm.output_suffix("reproduction", [{"test_look": "pre-registered evaluation (this runtime)"}]) == "_reproduction_1"
+    assert sm.output_suffix("reproduction", [{"test_look": "reproduction"}, {"test_look": "not scored (exploratory)"}]) == "_reproduction_2"
+
+
+def test_select_config_reason_names_the_failed_clause_with_margins_that_do_not_round_across_the_threshold():
+    # the 2026-10-18 record: C2 - C1 printed 0.100 at three decimals but below 0.10 unrounded
+    results = {"C0": _result("C0", [25.899, 26.784]), "C1": _result("C1", [25.899, 26.833]), "C2": _result("C2", [25.899, 26.93296])}
+    selection = sm.select_config(results)
+    assert (selection["chosen"], selection["model"]) == ("C0", "C0")
+    reason = selection["reason"]
+    assert "C1 is +0.049 dB over C0 (< 0.10)" in reason
+    assert "C2 (2 stages) is +0.149 dB over C0 (>= 0.10) and +0.09996 dB over the better one-stage config C1 (< 0.10)" in reason
+    assert "more-stages rule fails" in reason and "by at least 0.1 dB" not in reason
+    assert selection["margins_db"]["C2"]["vs_C1"] < 0.10 < selection["margins_db"]["C2"]["vs_C0"]
+    for diff in (0.0996, 0.09996, 0.1, 0.10004, 0.049):
+        text = sm._margin_text(diff, 0.10)
+        assert (float(text) >= 0.10 - 1e-9) == (diff >= 0.10 - 1e-9), (diff, text)
+
+
+def test_requoted_prose_carries_the_record_not_the_old_run(notebook):
+    md = _markdown(notebook)
+    for stale in ("2026-10-09", "c3ddc101", "is unproven", "no completed run on record", "has not been scored yet", "No two-stage run has completed", "will refresh them", "10-15 minutes"):
+        assert stale not in md, stale
+    for fact in ("1615.7 s", "1181.7 s", "369.6 s", "11.94 GiB", "6.32 GiB", "+0.89 dB (95 % CI 0.817 to 0.967)", "+0.53 dB (0.461 to 0.604)", "144 of 144", "0.70 to 1.02 dB"):
+        assert fact in md, fact
