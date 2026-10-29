@@ -291,7 +291,7 @@ def test_spec_2_5_metadata_and_use_notice(notebook):
 
 def test_byod_refusal_stops_with_a_message_and_invalidates_the_run(notebook):
     s4 = _cell(notebook, "USE_BYOD = False  # @param")
-    assert "raise RunStopped(f'BYOD refused, nothing was trained or scored: {exc}" in s4
+    assert "raise RunStopped(f'Refused: {byod_name}: {reason}. Nothing was trained or scored" in s4
     assert s4.rstrip().endswith("RUN_VALID = True") and "RUN_VALID = False" in s4
     assert getattr(sm.RunStopped("x"), "dimer_stop", False) is True
 

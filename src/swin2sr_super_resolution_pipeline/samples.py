@@ -4344,6 +4344,10 @@ class RunStopped(RuntimeError):
 
     dimer_stop = True
 
+    def _render_traceback_(self):
+        # IPython shows this instead of a traceback when the cell runs in the kernel itself (routing disabled).
+        return [str(self)]
+
 
 def preregistration_differences(settings: Mapping[str, Any]) -> list[str]:
     """Every pre-registered setting that `settings` misses or changes, as readable strings (empty: the run is under
