@@ -313,7 +313,7 @@ def test_s2r_m1_upload_outside_colab_cancelled_and_bad_path_are_explained(notebo
     monkeypatch.setitem(sys.modules, "google", None)
     with pytest.raises(RuntimeError, match="upload dialog exists only in Google Colab"):
         exec(_section_4(notebook, ""), _section_4_namespace([]))
-    with pytest.raises(sm.RunStopped, match="BYOD refused.*BYOD_PATH 'nowhere.zip' does not exist"):
+    with pytest.raises(sm.RunStopped, match="^Refused: nowhere.zip: BYOD_PATH 'nowhere.zip' does not exist"):
         exec(_section_4(notebook, "nowhere.zip"), _section_4_namespace([]))
     for uploaded, message in (({}, "received 0"), ({"a.zip": b"", "b.zip": b""}, "received 2")):
         google, colab, files = (types.ModuleType(n) for n in ("google", "google.colab", "google.colab.files"))
